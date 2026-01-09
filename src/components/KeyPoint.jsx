@@ -1,34 +1,27 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Stage, Layer, Image as KonvaImage, Line, Circle, Text, Group } from "react-konva";
 
-/* ===================== HELPERS ===================== */
+/* ================= HELPERS ================= */
 const toAlphabetic = (n) => {
   let s = "";
   n += 1;
   while (n > 0) {
     const r = (n - 1) % 26;
-    s = String.fromCharCode(65 + r) + s;
+    s = String.fromCharCode(97 + r) + s;
     n = Math.floor((n - 1) / 26);
   }
   return s;
 };
 
-const downloadURI = (uri, name) => {
-  const a = document.createElement("A");
-  a.href = uri;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-};
-
 const downloadText = (text, name) => {
-  const blob = new Blob([text], { type: "text/plain" });
-  downloadURI(URL.createObjectURL(blob), name);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+  a.download = name;
+  a.click();
 };
 
-/* ===================== MAIN ===================== */
-export default function KeypointAnnotatorAdmin() {
+/* ================= COMPONENT ================= */
+export default function KeypointAnnotator() {
   const stageRef = useRef(null);
 
   const [imageObj, setImageObj] = useState(null);
@@ -40,37 +33,12 @@ export default function KeypointAnnotatorAdmin() {
 
   const [connectMode, setConnectMode] = useState(false);
   const [activeKp, setActiveKp] = useState(null);
+
+  // 🔑 SIMPLE CONNECTION STATE
   const [connectionSource, setConnectionSource] = useState(null);
-  const [hoverKp, setHoverKp] = useState(null);
+  const [connectionTarget, setConnectionTarget] = useState(null);
 
-  /* ---------------- HISTORY (UNDO / REDO) ---------------- */
-  const [history, setHistory] = useState([]);
-  const [future, setFuture] = useState([]);
-
-  const snapshot = () => {
-    setHistory((h) => [...h, { keypoints, connections }]);
-    setFuture([]);
-  };
-
-  const undo = () => {
-    if (!history.length) return;
-    const prev = history[history.length - 1];
-    setFuture((f) => [{ keypoints, connections }, ...f]);
-    setKeypoints(prev.keypoints);
-    setConnections(prev.connections);
-    setHistory((h) => h.slice(0, -1));
-  };
-
-  const redo = () => {
-    if (!future.length) return;
-    const next = future[0];
-    setHistory((h) => [...h, { keypoints, connections }]);
-    setKeypoints(next.keypoints);
-    setConnections(next.connections);
-    setFuture((f) => f.slice(1));
-  };
-
-  /* ---------------- UPLOAD ---------------- */
+  /* ================= UPLOAD ================= */
   const handleUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -86,18 +54,23 @@ export default function KeypointAnnotatorAdmin() {
       setFileName(file.name);
       setKeypoints([]);
       setConnections([]);
-      setHistory([]);
-      setFuture([]);
+      setConnectionSource(null);
+      setConnectionTarget(null);
     };
     img.src = URL.createObjectURL(file);
   };
 
-  /* ---------------- ADD KEYPOINT ---------------- */
+  /* ================= ADD KEYPOINT ================= */
   const addKeypoint = (x, y) => {
-    snapshot();
     setKeypoints((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), x, y, name: toAlphabetic(prev.length), visibility: 2 },
+      {
+        id: crypto.randomUUID(),
+        x,
+        y,
+        name: toAlphabetic(prev.length),
+        visibility: 2,
+      },
     ]);
   };
 
@@ -105,18 +78,19 @@ export default function KeypointAnnotatorAdmin() {
     if (!imageObj) return;
     const stage = e.target.getStage();
     if (e.target !== stage && e.target.className !== "Image") return;
-    const p = stage.getPointerPosition();
-    addKeypoint(p.x, p.y);
+    const pos = stage.getPointerPosition();
+    addKeypoint(pos.x, pos.y);
   };
 
-  /* ---------------- DRAG ---------------- */
+  /* ================= DRAG ================= */
   const handleDrag = (id, e) => {
-    snapshot();
     const { x, y } = e.target.position();
-    setKeypoints((prev) => prev.map((k) => (k.id === id ? { ...k, x, y } : k)));
+    setKeypoints((prev) =>
+      prev.map((k) => (k.id === id ? { ...k, x, y } : k))
+    );
   };
 
-  /* ---------------- CONNECTION LOGIC ---------------- */
+  /* ================= CONNECTION LOGIC (SIMPLE & CORRECT) ================= */
   const handleKeypointClick = (id, e) => {
     e.cancelBubble = true;
 
@@ -125,15 +99,20 @@ export default function KeypointAnnotatorAdmin() {
       return;
     }
 
+    // STEP 1: pick source
     if (!connectionSource) {
       setConnectionSource(id);
       setActiveKp(id);
       return;
     }
 
-    if (id === connectionSource) return;
+    // prevent self-connection
+    if (connectionSource === id) return;
 
-    snapshot();
+    // STEP 2: pick destination
+    setConnectionTarget(id);
+
+    // create ONE connection
     setConnections((prev) => {
       const exists = prev.some(
         (c) =>
@@ -143,10 +122,22 @@ export default function KeypointAnnotatorAdmin() {
       if (exists) return prev;
       return [...prev, { from: connectionSource, to: id }];
     });
+
+    // 🔁 RESET after ONE connection
+    setConnectionSource(null);
+    setConnectionTarget(null);
+    setActiveKp(null);
+  };
+
+  /* ================= DELETE ================= */
+  const deleteKeypoint = (id) => {
+    setKeypoints((prev) => prev.filter((k) => k.id !== id));
+    setConnections((prev) => prev.filter((c) => c.from !== id && c.to !== id));
+    if (connectionSource === id) setConnectionSource(null);
+    if (connectionTarget === id) setConnectionTarget(null);
   };
 
   const removeConnection = (from, to) => {
-    snapshot();
     setConnections((prev) =>
       prev.filter(
         (c) =>
@@ -158,23 +149,13 @@ export default function KeypointAnnotatorAdmin() {
     );
   };
 
-  const deleteKeypoint = (id) => {
-    snapshot();
-    setKeypoints((prev) => prev.filter((k) => k.id !== id));
-    setConnections((prev) => prev.filter((c) => c.from !== id && c.to !== id));
-    if (connectionSource === id) setConnectionSource(null);
-    if (activeKp === id) setActiveKp(null);
-  };
-
-  useEffect(() => {
-    if (!connectMode) setConnectionSource(null);
-  }, [connectMode]);
-
-  /* ---------------- SAVE ---------------- */
+  /* ================= SAVE ================= */
   const handleSave = () => {
     if (!keypoints.length) return;
 
-    const ordered = [...keypoints].sort((a, b) => a.name.localeCompare(b.name));
+    const ordered = [...keypoints].sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
 
     const xs = ordered.map((k) => k.x);
     const ys = ordered.map((k) => k.y);
@@ -194,29 +175,23 @@ export default function KeypointAnnotatorAdmin() {
     ordered.forEach((k) => parts.push(nx(k.x), ny(k.y), k.visibility));
 
     downloadText(parts.join(" "), fileName.replace(/\..+$/, "") + ".txt");
-    downloadURI(stageRef.current.toDataURL({ pixelRatio: 2 }), fileName.replace(/\..+$/, "") + "_annotated.png");
   };
 
-  /* ===================== UI ===================== */
+  /* ================= UI ================= */
   return (
     <div className="flex h-screen bg-slate-100">
-      {/* ================= SIDEBAR ================= */}
+      {/* ===== SIDEBAR ===== */}
       <aside className="w-96 bg-white border-r p-4 flex flex-col gap-3">
-        <h2 className="font-bold text-lg">Keypoint Annotation</h2>
+        <h2 className="font-bold text-lg">Keypoints</h2>
 
-        <label className="bg-indigo-600 text-white text-sm py-2 text-center rounded cursor-pointer">
+        <label className="bg-indigo-600 text-white py-2 text-center rounded cursor-pointer">
           Upload Image
           <input hidden type="file" accept="image/*" onChange={handleUpload} />
         </label>
 
-        <div className="flex gap-2">
-          <button onClick={undo} className="flex-1 bg-slate-200 py-2 rounded text-sm">Undo</button>
-          <button onClick={redo} className="flex-1 bg-slate-200 py-2 rounded text-sm">Redo</button>
-        </div>
-
         <button
           onClick={() => setConnectMode((v) => !v)}
-          className={`py-2 rounded text-sm ${
+          className={`py-2 rounded ${
             connectMode ? "bg-emerald-600 text-white" : "bg-slate-200"
           }`}
         >
@@ -248,7 +223,7 @@ export default function KeypointAnnotatorAdmin() {
                 />
 
                 <div className="text-xs text-slate-500 mt-1">
-                  Connected to: {linked.length ? linked.join(", ") : "—"}
+                  Connected: {linked.length ? linked.join(", ") : "—"}
                 </div>
 
                 <div className="flex justify-between mt-2">
@@ -272,13 +247,13 @@ export default function KeypointAnnotatorAdmin() {
 
         <button
           onClick={handleSave}
-          className="bg-indigo-600 text-white py-2 rounded text-sm"
+          className="bg-indigo-600 text-white py-2 rounded"
         >
           Save (YOLOv8)
         </button>
       </aside>
 
-      {/* ================= CANVAS ================= */}
+      {/* ===== CANVAS ===== */}
       <main className="flex-1 flex items-center justify-center">
         {!imageObj ? (
           <div className="text-slate-400">Upload an image</div>
@@ -290,7 +265,11 @@ export default function KeypointAnnotatorAdmin() {
             onMouseDown={handleStageClick}
           >
             <Layer>
-              <KonvaImage image={imageObj} width={stageSize.w} height={stageSize.h} />
+              <KonvaImage
+                image={imageObj}
+                width={stageSize.w}
+                height={stageSize.h}
+              />
             </Layer>
 
             <Layer>
@@ -319,7 +298,11 @@ export default function KeypointAnnotatorAdmin() {
                 >
                   <Circle
                     radius={6}
-                    fill={kp.id === connectionSource ? "#22c55e" : "#fff"}
+                    fill={
+                      kp.id === connectionSource
+                        ? "#22c55e"
+                        : "#ffffff"
+                    }
                     stroke="#6366f1"
                     strokeWidth={2}
                   />
