@@ -7,14 +7,14 @@ const toAlphabetic = (n) => {
   n += 1;
   while (n > 0) {
     const r = (n - 1) % 26;
-    s = String.fromCharCode(97 + r) + s;
+    s = String.fromCharCode(65 + r) + s;
     n = Math.floor((n - 1) / 26);
   }
   return s;
 };
 
 const downloadText = (text, name) => {
-  const a = document.createElement("a");
+  const a = document.createElement("A");
   a.href = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
   a.download = name;
   a.click();
@@ -295,6 +295,13 @@ export default function KeypointAnnotator() {
                   draggable
                   onDragMove={(e) => handleDrag(kp.id, e)}
                   onClick={(e) => handleKeypointClick(kp.id, e)}
+                  // ADD THIS BLOCK:
+                  dragBoundFunc={(pos) => {
+                    return {
+                      x: Math.max(0, Math.min(stageSize.w, pos.x)),
+                      y: Math.max(0, Math.min(stageSize.h, pos.y)),
+                    };
+                  }}
                 >
                   <Circle
                     radius={6}

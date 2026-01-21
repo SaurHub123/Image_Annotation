@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import Editor from "./components/Editor";
 import AnnotationViewer from "./components/Viewer";
 import KeypointAnnotator from "./components/KeyPoint";
+import SkeletonEditor from "./components/skeletonPage";
 
 function Home() {
   useEffect(() => {
@@ -40,6 +41,12 @@ function Home() {
             className="px-6 py-3 rounded-xl bg-white text-blue-600 font-medium border border-blue-200 hover:bg-blue-50 transition"
           >
             Key-Point Annotations
+          </Link>
+          <Link
+            to="/skeletons"
+            className="px-6 py-3 rounded-xl bg-white text-blue-600 font-medium border border-blue-200 hover:bg-blue-50 transition"
+          >
+            Skeleton
           </Link>
 
         </div>
@@ -135,6 +142,7 @@ export default function App() {
       <Route path="/editor" element={<Editor />} />
       <Route path="/viewer" element={<AnnotationViewer />} />
       <Route path="/keypoints" element={<KeypointAnnotator />} />
+      <Route path="/skeletons" element={<SkeletonEditor />} />
     </Routes>
   );
 }
