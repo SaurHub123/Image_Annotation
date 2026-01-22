@@ -284,7 +284,7 @@ export default function SkeletonEditor() {
       ...prev,
       {
         id: crypto.randomUUID(),
-        name: `Point ${prev.length + 1}`,
+        name: `KP ${prev.length + 1}`,
         x: clamp(pos.x / SIZE),
         y: clamp(pos.y / SIZE),
       },
@@ -471,7 +471,6 @@ export default function SkeletonEditor() {
         <div className="space-y-3">
           {skeletons.map((sk) => (
             <button
-              key={sk.id}
               onClick={() => loadSkeleton(sk)}
               className={`w-full group flex items-center justify-between p-4 rounded-xl border transition-all ${
                 activeId === sk.id 
