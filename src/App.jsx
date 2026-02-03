@@ -153,6 +153,7 @@ import Editor from "./components/Editor";
 import AnnotationViewer from "./components/Viewer";
 import KeypointAnnotator from "./components/KeyPoint";
 import SkeletonEditor from "./components/skeletonPage";
+import KeypointVisualizer from "./components/keyValidator";
 
 function Home() {
   useEffect(() => {
@@ -291,6 +292,7 @@ export default function App() {
       <Route path="/viewer" element={<AnnotationViewer />} />
       <Route path="/keypoints" element={<KeypointAnnotator />} />
       <Route path="/skeletons" element={<SkeletonEditor />} />
+      <Route path="/validator" element={<KeypointVisualizer />} />
     </Routes>
   );
 }
