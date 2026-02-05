@@ -1,15 +1,23 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { Stage, Layer, Image as KonvaImage, Line, Circle, Group } from "react-konva";
+import { Stage, Layer, Image as KonvaImage, Line, Circle, Group, Label, Tag, Text } from "react-konva";
+import Konva from "konva";
+import {
+  Download,
+  Upload,
+  Link as LinkIcon,
+  Trash2,
+  Sun,
+  Moon,
+  Crosshair,
+  ImagePlus,
+  Palette,
+  Undo,
+  Pentagon,
+  ChevronRight,
+  Layers
+} from "lucide-react";
 
-// --- UI Icons (Inline SVGs for zero-dependency) ---
-const Icons = {
-  Upload: () => <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>,
-  Undo: () => <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>,
-  Save: () => <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>,
-  Image: () => <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1" className="text-slate-300"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-};
-
-// ------------------ Helper: Shoelace Formula for Area ------------------
+/* ================= HELPERS (Preserved) ================= */
 const calculatePolygonArea = (vertices) => {
   let area = 0;
   const n = vertices.length;
@@ -23,7 +31,6 @@ const calculatePolygonArea = (vertices) => {
   return Math.abs(area / 2);
 };
 
-// ------------------ Helper: Download ------------------
 const downloadURI = (uri, name) => {
   const link = document.createElement("a");
   link.download = name;
@@ -39,46 +46,60 @@ const downloadJSON = (data, name) => {
   downloadURI(url, name);
 };
 
-export default function Annotator() {
-  useEffect(() => {
-    document.title = "Emplitech • COCO Annotator";
-  }, []);
-
+/* ================= COMPONENT ================= */
+export default function Editor() {
   const stageRef = useRef(null);
 
-  // ------------------ State ------------------
+  // Theme State
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // App State
   const [imageObj, setImageObj] = useState(null);
   const [fileName, setFileName] = useState("");
-  const [stageSize, setStageSize] = useState({ w: 1024, h: 640 });
+  const [stageSize, setStageSize] = useState({ w: 900, h: 600 });
   const [shapes, setShapes] = useState([]);
   const [currentPoints, setCurrentPoints] = useState([]);
   const [mousePos, setMousePos] = useState(null);
+  const [activeShapeId, setActiveShapeId] = useState(null);
+
+  // Filter State
+  const [activeFilter, setActiveFilter] = useState("None");
+  const imageRef = useRef(null);
 
   const isDrawing = currentPoints.length > 0;
 
-  // ------------------ Upload ------------------
+  /* ================= EFFECTS ================= */
+  useEffect(() => {
+    document.title = "PixelPoly • Polygon Annotator";
+  }, []);
+
+  useEffect(() => {
+    if (imageObj && imageRef.current) {
+      imageRef.current.cache();
+    }
+  }, [imageObj, activeFilter, stageSize]);
+
+  /* ================= UPLOAD ================= */
   const handleUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
-      const maxW = 1000;
-      const ratio = Math.min(maxW / img.width, 1);
-      const w = Math.round(img.width * ratio);
-      const h = Math.round(img.height * ratio);
-
+      const scale = Math.min(900 / img.width, 1);
+      setStageSize({
+        w: Math.round(img.width * scale),
+        h: Math.round(img.height * scale),
+      });
       setImageObj(img);
-      setStageSize({ w, h });
       setFileName(file.name);
       setShapes([]);
       setCurrentPoints([]);
     };
-    img.src = url;
+    img.src = URL.createObjectURL(file);
   };
 
-  // ------------------ Interaction ------------------
+  /* ================= DRAWING LOGIC (Preserved & Adapted) ================= */
   const getRelativePointerPosition = (node) => {
     const transform = node.getAbsoluteTransform().copy();
     transform.invert();
@@ -87,6 +108,10 @@ export default function Annotator() {
   };
 
   const handleStageClick = (e) => {
+    if (!imageObj) return;
+
+    // If clicking on a shape, select it (unless creating new point)
+    // Here we prioritize drawing
     if (e.target.attrs.id === "closer") return;
 
     const stage = e.target.getStage();
@@ -95,6 +120,7 @@ export default function Annotator() {
   };
 
   const handleMouseMove = (e) => {
+    if (!imageObj) return;
     const stage = e.target.getStage();
     const pos = getRelativePointerPosition(stage);
     setMousePos(pos);
@@ -109,8 +135,9 @@ export default function Annotator() {
 
     const newShape = {
       id: Date.now(),
+      name: `Poly ${shapes.length + 1}`, // Added name for list
       points: closedPoints,
-      color: "#00FF00"
+      color: Konva.Util.getRandomColor()
     };
 
     setShapes([...shapes, newShape]);
@@ -126,10 +153,27 @@ export default function Annotator() {
     }
   };
 
-  // ------------------ Export ------------------
+  const deleteShape = (id) => {
+    setShapes(prev => prev.filter(s => s.id !== id));
+    if (activeShapeId === id) setActiveShapeId(null);
+  };
+
+  /* ================= FILTERS ================= */
+  const getFilters = () => {
+    switch (activeFilter) {
+      case "Grayscale": return [Konva.Filters.Grayscale];
+      case "Invert": return [Konva.Filters.Invert];
+      case "Contrast": return [Konva.Filters.Brighten];
+      case "Sepia": return [Konva.Filters.Sepia];
+      default: return [];
+    }
+  };
+
+  /* ================= SAVE ================= */
   const handleSave = () => {
     if (!imageObj) return;
 
+    // COCO-like export structure preserved
     const categories = [{ id: 1, name: "object" }];
     const annotations = shapes.map((shape, index) => {
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -155,7 +199,7 @@ export default function Annotator() {
     });
 
     const cocoData = {
-      info: { year: new Date().getFullYear(), version: "1.0", description: "Exported from React" },
+      info: { year: new Date().getFullYear(), version: "1.0", description: "Exported from PixelPoly" },
       licenses: [],
       images: [{ id: 1, width: stageSize.w, height: stageSize.h, file_name: fileName }],
       categories,
@@ -164,11 +208,12 @@ export default function Annotator() {
 
     const baseName = fileName.replace(/\.[^/.]+$/, "");
     downloadJSON(cocoData, `${baseName}_coco.json`);
-    const dataURL = stageRef.current.toDataURL({ pixelRatio: 2 });
-    downloadURI(dataURL, `${baseName}_annotated.png`);
+    // Optional: download screenshot too like before?
+    // const dataURL = stageRef.current.toDataURL({ pixelRatio: 2 });
+    // downloadURI(dataURL, `${baseName}_annotated.png`);
   };
 
-  // ------------------ Render Helpers ------------------
+  /* ================= RENDER HELPERS ================= */
   const previewPoints = useMemo(() => {
     if (!mousePos || currentPoints.length === 0) return currentPoints;
     return [...currentPoints, mousePos.x, mousePos.y];
@@ -182,151 +227,264 @@ export default function Annotator() {
     return dist < 10;
   }, [currentPoints, mousePos]);
 
-  // CSS for Dotted Background
-  const bgStyle = {
-    backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
-    backgroundSize: '20px 20px',
+
+  /* ================= UI CLASSES ================= */
+  const theme = {
+    bg: isDarkMode ? "bg-slate-900" : "bg-slate-50",
+    sidebar: isDarkMode ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200",
+    text: isDarkMode ? "text-slate-100" : "text-slate-800",
+    subText: isDarkMode ? "text-slate-400" : "text-slate-500",
+    card: isDarkMode ? "bg-slate-700/50 border-slate-600" : "bg-white border-slate-200",
+    input: isDarkMode ? "bg-slate-900 border-slate-600 text-white" : "bg-slate-50 border-slate-300 text-slate-900",
+    buttonSecondary: isDarkMode ? "bg-slate-700 hover:bg-slate-600 text-white" : "bg-slate-200 hover:bg-slate-300 text-slate-800",
+    uploadBox: isDarkMode
+      ? "border-slate-700 bg-slate-800/50 hover:bg-slate-800 hover:border-indigo-500"
+      : "border-slate-300 bg-slate-100 hover:bg-white hover:border-indigo-500",
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 text-slate-800 font-sans selection:bg-indigo-100 selection:text-indigo-700">
-      
-      {/* --- Top Navigation --- */}
-      <header className="px-6 py-3 bg-white border-b border-slate-200 flex items-center justify-between sticky top-0 z-20 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">E</div>
-          <div>
-            <h1 className="text-sm font-bold text-slate-900 tracking-wide">EMPLITECH</h1>
-            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Annotator Tool</p>
+    <div className={`flex h-screen w-full transition-colors duration-300 ${theme.bg} ${theme.text}`}>
+
+      {/* ===== SIDEBAR ===== */}
+      <aside className={`w-80 flex-shrink-0 border-r flex flex-col shadow-xl z-10 transition-colors duration-300 ${theme.sidebar}`}>
+
+        {/* Header */}
+        <div className="p-5 border-b border-inherit flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Pentagon className="w-6 h-6 text-indigo-500" />
+            <h1 className="font-bold text-xl tracking-tight">PixelPoly</h1>
           </div>
-        </div>
-
-        <div className="flex gap-2">
-          {/* Action Toolbar */}
-          <div className="flex items-center gap-2 pr-4 border-r border-slate-200 mr-2">
-            <button 
-              onClick={handleUndo} 
-              disabled={!shapes.length && !isDrawing}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Icons.Undo /> Undo
-            </button>
-          </div>
-
-          <label className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 cursor-pointer transition-all shadow-sm">
-            <input type="file" accept="image/*" hidden onChange={handleUpload} />
-            <Icons.Upload />
-            {fileName ? "Replace Image" : "Upload Image"}
-          </label>
-
           <button
-            onClick={handleSave}
-            disabled={shapes.length === 0}
-            className="flex items-center gap-2 px-4 py-1.5 text-xs font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 shadow-sm hover:shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className={`p-2 rounded-full transition-all ${isDarkMode ? 'bg-slate-700 hover:bg-slate-600' : 'bg-slate-100 hover:bg-slate-200'}`}
           >
-            <Icons.Save /> Save Project
+            {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-indigo-600" />}
           </button>
         </div>
-      </header>
 
-      {/* --- Workspace --- */}
-      <main className="flex-1 overflow-auto relative flex flex-col items-center justify-center p-8" style={bgStyle}>
-        
-        {/* Helper Badge */}
-        {imageObj && (
-           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur border border-slate-200 shadow-sm px-4 py-1.5 rounded-full z-10">
-             <p className="text-xs text-slate-500 font-medium flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Click points to draw. Click the <span className="text-red-500 font-bold">red start node</span> to close.
-             </p>
-           </div>
-        )}
+        {/* Controls */}
+        <div className="p-4 space-y-3 border-b border-inherit">
+          <label className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg cursor-pointer transition-colors shadow-lg shadow-indigo-500/20">
+            <Upload size={18} />
+            Upload Image
+            <input hidden type="file" accept="image/*" onChange={handleUpload} />
+          </label>
 
-        {/* Canvas Container */}
-        <div className={`transition-all duration-500 ease-in-out ${imageObj ? 'scale-100 opacity-100' : 'scale-95 opacity-100'}`}>
-          {!imageObj ? (
-            <label className="group flex flex-col items-center justify-center w-[600px] h-[400px] border-2 border-dashed border-slate-300 rounded-xl bg-slate-50/50 hover:bg-white hover:border-indigo-400 hover:shadow-lg hover:shadow-indigo-50/50 cursor-pointer transition-all duration-300">
-              <div className="p-4 rounded-full bg-white shadow-sm mb-4 group-hover:scale-110 transition-transform">
-                <Icons.Image />
-              </div>
-              <p className="text-sm font-semibold text-slate-600 group-hover:text-indigo-600 transition-colors">Click to Upload Image</p>
-              <p className="text-xs text-slate-400 mt-1">Supports JPG, PNG</p>
-              <input type="file" accept="image/*" hidden onChange={handleUpload} />
-            </label>
-          ) : (
-            <div className="bg-white shadow-2xl rounded-sm ring-1 ring-slate-900/5">
-              <Stage
-                ref={stageRef}
-                width={stageSize.w}
-                height={stageSize.h}
-                onMouseDown={handleStageClick}
-                onMouseMove={handleMouseMove}
-                className="cursor-crosshair"
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handleUndo}
+              disabled={!shapes.length && !isDrawing}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all ${theme.buttonSecondary} ${(!shapes.length && !isDrawing) && 'opacity-50 cursor-not-allowed'}`}
+            >
+              <Undo size={16} /> Undo
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!shapes.length}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors ${!shapes.length ? "opacity-50 cursor-not-allowed " + theme.buttonSecondary : "bg-sky-600 hover:bg-sky-700 text-white shadow-lg shadow-sky-500/20"
+                }`}
+            >
+              <Download size={16} />
+              Save
+            </button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="px-4 pb-4 border-b border-inherit pt-3">
+          <div className="flex items-center gap-2 mb-2 text-xs font-bold uppercase tracking-wider opacity-50">
+            <Palette size={12} />
+            <span>Filters</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {["None", "Grayscale", "Invert"].map(f => (
+              <button
+                key={f}
+                onClick={() => setActiveFilter(f)}
+                className={`text-xs py-1.5 rounded border transition-all ${activeFilter === f
+                    ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
+                    : theme.buttonSecondary
+                  }`}
               >
-                <Layer>
-                  <KonvaImage image={imageObj} width={stageSize.w} height={stageSize.h} />
-                </Layer>
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
 
-                <Layer>
-                  {shapes.map((shape) => (
-                    <Group key={shape.id}>
-                      <Line
-                        points={shape.points}
-                        closed={true}
-                        stroke="#00FF00"
-                        strokeWidth={2}
-                        fill="rgba(0, 255, 0, 0.2)"
-                      />
-                    </Group>
-                  ))}
+        {/* Saved Shapes List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+          <div className="flex items-center justify-between">
+            <h3 className={`text-xs font-bold uppercase tracking-wider ${theme.subText}`}>
+              Polygons ({shapes.length})
+            </h3>
+            {shapes.length > 0 && (
+              <span className="text-xs text-indigo-500 cursor-pointer hover:underline" onClick={() => setShapes([])}>Clear All</span>
+            )}
+          </div>
 
-                  {isDrawing && (
-                    <>
-                      <Line
-                        points={previewPoints}
-                        stroke="#6366f1"
-                        strokeWidth={2}
-                        dash={[4, 4]}
-                      />
-                      {currentPoints.map((val, i) => {
-                        if (i % 2 !== 0) return null;
-                        const x = val;
-                        const y = currentPoints[i + 1];
-                        const isStart = i === 0;
-
-                        return (
-                          <Circle
-                            key={i}
-                            x={x}
-                            y={y}
-                            radius={isStart ? 6 : 3.5}
-                            fill={isStart ? (isOverStart ? "#ef4444" : "#6366f1") : "#ffffff"}
-                            stroke={isStart ? (isOverStart ? "#ffffff" : "#ffffff") : "#6366f1"}
-                            strokeWidth={isStart ? 2 : 1.5}
-                            id={isStart ? "closer" : undefined}
-                            onClick={isStart ? handleCloseShape : undefined}
-                            onMouseEnter={(e) => {
-                              if (isStart) {
-                                e.target.scale({ x: 1.3, y: 1.3 });
-                                document.body.style.cursor = 'pointer';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (isStart) {
-                                e.target.scale({ x: 1, y: 1 });
-                                document.body.style.cursor = 'crosshair';
-                              }
-                            }}
-                          />
-                        );
-                      })}
-                    </>
-                  )}
-                </Layer>
-              </Stage>
+          {!shapes.length && (
+            <div className={`text-center py-10 ${theme.subText} text-sm`}>
+              Start clicking on the image<br />to draw a polygon.
             </div>
           )}
+
+          {shapes.map((shape, i) => (
+            <div
+              key={shape.id}
+              onClick={() => setActiveShapeId(shape.id)}
+              className={`group relative rounded-lg border p-3 transition-all cursor-pointer ${theme.card} ${activeShapeId === shape.id ? 'ring-1 ring-indigo-500 border-indigo-500' : ''}`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: shape.color || '#6366f1' }} />
+
+                <input
+                  value={shape.name}
+                  onChange={(e) =>
+                    setShapes((prev) =>
+                      prev.map((item) =>
+                        item.id === shape.id ? { ...item, name: e.target.value } : item
+                      )
+                    )
+                  }
+                  onClick={(e) => e.stopPropagation()}
+                  className={`flex-1 text-sm font-semibold rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 ${theme.input} bg-transparent`}
+                />
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteShape(shape.id);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-1.5 text-red-500 hover:bg-red-50 rounded transition-all"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              <div className="mt-2 text-[10px] opacity-60 font-mono">
+                Points: {shape.points.length / 2}
+              </div>
+            </div>
+          ))}
         </div>
+      </aside>
+
+      {/* ===== CANVAS AREA ===== */}
+      <main className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto relative">
+        {!imageObj ? (
+          <label
+            className={`flex flex-col items-center justify-center w-full max-w-2xl h-96 border-2 border-dashed rounded-xl cursor-pointer transition-all ${theme.uploadBox}`}
+          >
+            <div className="bg-slate-200 dark:bg-slate-700 p-5 rounded-full mb-4">
+              <ImagePlus className="w-10 h-10 text-indigo-500" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Click to Upload Image</h3>
+            <p className={theme.subText}>Or drag and drop a file here</p>
+            <input hidden type="file" accept="image/*" onChange={handleUpload} />
+          </label>
+        ) : (
+          <div className="shadow-2xl rounded-lg overflow-hidden border border-slate-500/20">
+            <Stage
+              ref={stageRef}
+              width={stageSize.w}
+              height={stageSize.h}
+              onMouseDown={handleStageClick}
+              onMouseMove={handleMouseMove}
+              className={isDrawing ? "cursor-crosshair" : "cursor-default"}
+            >
+              <Layer>
+                <KonvaImage
+                  ref={imageRef}
+                  image={imageObj}
+                  width={stageSize.w}
+                  height={stageSize.h}
+                  filters={getFilters()}
+                  brightness={activeFilter === "Contrast" ? 0.2 : 0}
+                />
+              </Layer>
+
+              <Layer>
+                {shapes.map((shape) => (
+                  <Group key={shape.id} onClick={(e) => { e.cancelBubble = true; setActiveShapeId(shape.id); }}>
+                    <Line
+                      points={shape.points}
+                      closed={true}
+                      stroke={shape.color || "#00FF00"}
+                      strokeWidth={2}
+                      fill={activeShapeId === shape.id ? (shape.color || "#00FF00") + "66" : (shape.color || "#00FF00") + "33"}
+                    />
+                    {/* Label for the shape */}
+                    {shape.points.length > 0 && (
+                      <Label
+                        x={shape.points[0]}
+                        y={shape.points[1] - 20}
+                        opacity={0.9}
+                      >
+                        <Tag
+                          fill="#1e293b"
+                          pointerDirection="down"
+                          pointerWidth={6}
+                          pointerHeight={6}
+                          lineJoin="round"
+                        />
+                        <Text
+                          text={shape.name}
+                          fontFamily="sans-serif"
+                          fontSize={12}
+                          padding={4}
+                          fill="white"
+                        />
+                      </Label>
+                    )}
+                  </Group>
+                ))}
+
+                {isDrawing && (
+                  <>
+                    <Line
+                      points={previewPoints}
+                      stroke="#6366f1"
+                      strokeWidth={2}
+                      dash={[4, 4]}
+                    />
+                    {currentPoints.map((val, i) => {
+                      if (i % 2 !== 0) return null;
+                      const x = val;
+                      const y = currentPoints[i + 1];
+                      const isStart = i === 0;
+
+                      return (
+                        <Circle
+                          key={i}
+                          x={x}
+                          y={y}
+                          radius={isStart ? 6 : 3.5}
+                          fill={isStart ? (isOverStart ? "#ef4444" : "#6366f1") : "#ffffff"}
+                          stroke={isStart ? (isOverStart ? "#ffffff" : "#ffffff") : "#6366f1"}
+                          strokeWidth={isStart ? 2 : 1.5}
+                          id={isStart ? "closer" : undefined}
+                          onClick={isStart ? handleCloseShape : undefined}
+                          onMouseEnter={(e) => {
+                            if (isStart) {
+                              e.target.scale({ x: 1.3, y: 1.3 });
+                              document.body.style.cursor = 'pointer';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (isStart) {
+                              e.target.scale({ x: 1, y: 1 });
+                              document.body.style.cursor = 'crosshair';
+                            }
+                          }}
+                        />
+                      );
+                    })}
+                  </>
+                )}
+              </Layer>
+            </Stage>
+          </div>
+        )}
       </main>
     </div>
   );

@@ -20,7 +20,15 @@ import {
   Crosshair,
   ImagePlus, // Changed icon for better context
   X,
+  Palette,
+  Layers,
+  ChevronRight,
+  ChevronLeft,
+  PanelLeftClose,
+  PanelRightClose
 } from "lucide-react";
+import Konva from "konva";
+import { loadSkeletons } from "../utils/skeletonStorage";
 
 /* ================= HELPERS ================= */
 const toAlphabetic = (n) => {
@@ -57,9 +65,26 @@ export default function KeypointAnnotator() {
   const [connectMode, setConnectMode] = useState(false);
   const [activeKp, setActiveKp] = useState(null);
 
+  // Skeleton & Filter State
+  const [skeletons, setSkeletons] = useState([]);
+  const [activeFilter, setActiveFilter] = useState("None");
+  const [showRightSidebar, setShowRightSidebar] = useState(true);
+  const imageRef = useRef(null);
+
   // Connection State
   const [connectionSource, setConnectionSource] = useState(null);
   const [connectionTarget, setConnectionTarget] = useState(null);
+
+  /* ================= EFFECTS ================= */
+  React.useEffect(() => {
+    setSkeletons(loadSkeletons());
+  }, []);
+
+  React.useEffect(() => {
+    if (imageObj && imageRef.current) {
+      imageRef.current.cache();
+    }
+  }, [imageObj, activeFilter, stageSize]);
 
   /* ================= UPLOAD ================= */
   const handleUpload = (e) => {
@@ -157,6 +182,47 @@ export default function KeypointAnnotator() {
     if (connectionTarget === id) setConnectionTarget(null);
   };
 
+  /* ================= SKELETONS ================= */
+  const applySkeleton = (sk) => {
+    // scale 0-1 coords to stageSize
+    const newKpMap = new Map();
+    const newKeypoints = sk.keypoints.map((kp) => {
+      const newId = crypto.randomUUID();
+      newKpMap.set(kp.id, newId);
+      return {
+        id: newId,
+        x: kp.x * stageSize.w,
+        y: kp.y * stageSize.h,
+        name: kp.name,
+        visibility: 2,
+      };
+    });
+
+    const newConnections = sk.connections.map((c) => ({
+      from: newKpMap.get(c.from),
+      to: newKpMap.get(c.to),
+    }));
+
+    setKeypoints((prev) => [...prev, ...newKeypoints]);
+    setConnections((prev) => [...prev, ...newConnections]);
+  };
+
+  /* ================= FILTERS ================= */
+  const getFilters = () => {
+    switch (activeFilter) {
+      case "Grayscale":
+        return [Konva.Filters.Grayscale];
+      case "Invert":
+        return [Konva.Filters.Invert];
+      case "Contrast":
+        return [Konva.Filters.Brighten]; // Using Brighten as simple proxy or Contrast
+      case "Sepia":
+        return [Konva.Filters.Sepia];
+      default:
+        return [];
+    }
+  };
+
   /* ================= SAVE ================= */
   const handleSave = () => {
     if (!keypoints.length) return;
@@ -193,23 +259,23 @@ export default function KeypointAnnotator() {
     card: isDarkMode ? "bg-slate-700/50 border-slate-600" : "bg-white border-slate-200",
     input: isDarkMode ? "bg-slate-900 border-slate-600 text-white" : "bg-slate-50 border-slate-300 text-slate-900",
     buttonSecondary: isDarkMode ? "bg-slate-700 hover:bg-slate-600 text-white" : "bg-slate-200 hover:bg-slate-300 text-slate-800",
-    uploadBox: isDarkMode 
-      ? "border-slate-700 bg-slate-800/50 hover:bg-slate-800 hover:border-indigo-500" 
+    uploadBox: isDarkMode
+      ? "border-slate-700 bg-slate-800/50 hover:bg-slate-800 hover:border-indigo-500"
       : "border-slate-300 bg-slate-100 hover:bg-white hover:border-indigo-500",
   };
 
   /* ================= RENDER ================= */
   return (
     <div className={`flex h-screen w-full transition-colors duration-300 ${theme.bg} ${theme.text}`}>
-      
+
       {/* ===== SIDEBAR ===== */}
       <aside className={`w-80 flex-shrink-0 border-r flex flex-col shadow-xl z-10 transition-colors duration-300 ${theme.sidebar}`}>
-        
+
         {/* Header */}
         <div className="p-5 border-b border-inherit flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Crosshair className="w-6 h-6 text-indigo-500" />
-            <h1 className="font-bold text-xl tracking-tight">PixelLabel</h1>
+            <h1 className="font-bold text-xl tracking-tight">PixelPoint</h1>
           </div>
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
@@ -230,11 +296,10 @@ export default function KeypointAnnotator() {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setConnectMode(!connectMode)}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all ${
-                connectMode
-                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-900"
-                  : theme.buttonSecondary
-              }`}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all ${connectMode
+                ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-900"
+                : theme.buttonSecondary
+                }`}
             >
               <LinkIcon size={16} />
               {connectMode ? "Linking..." : "Link Mode"}
@@ -242,13 +307,34 @@ export default function KeypointAnnotator() {
             <button
               onClick={handleSave}
               disabled={!keypoints.length}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors ${
-                 !keypoints.length ? "opacity-50 cursor-not-allowed " + theme.buttonSecondary : "bg-sky-600 hover:bg-sky-700 text-white shadow-lg shadow-sky-500/20"
-              }`}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors ${!keypoints.length ? "opacity-50 cursor-not-allowed " + theme.buttonSecondary : "bg-sky-600 hover:bg-sky-700 text-white shadow-lg shadow-sky-500/20"
+                }`}
             >
               <Download size={16} />
               Save
             </button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="px-4 pb-4 border-b border-inherit">
+          <div className="flex items-center gap-2 mb-2 text-xs font-bold uppercase tracking-wider opacity-50">
+            <Palette size={12} />
+            <span>Filters</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {["None", "Grayscale", "Invert"].map(f => ( // Added Sepia later if needed
+              <button
+                key={f}
+                onClick={() => setActiveFilter(f)}
+                className={`text-xs py-1.5 rounded border transition-all ${activeFilter === f
+                  ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
+                  : theme.buttonSecondary
+                  }`}
+              >
+                {f}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -259,14 +345,14 @@ export default function KeypointAnnotator() {
               Keypoints ({keypoints.length})
             </h3>
             {keypoints.length > 0 && (
-                <span className="text-xs text-indigo-500 cursor-pointer hover:underline" onClick={() => {setKeypoints([]); setConnections([])}}>Clear All</span>
+              <span className="text-xs text-indigo-500 cursor-pointer hover:underline" onClick={() => { setKeypoints([]); setConnections([]) }}>Clear All</span>
             )}
           </div>
 
           {!keypoints.length && (
-             <div className={`text-center py-10 ${theme.subText} text-sm`}>
-                No keypoints added yet.<br/>Click on the image to start.
-             </div>
+            <div className={`text-center py-10 ${theme.subText} text-sm`}>
+              No keypoints added yet.<br />Click on the image to start.
+            </div>
           )}
 
           {keypoints.map((kp) => {
@@ -286,43 +372,43 @@ export default function KeypointAnnotator() {
                 className={`group relative rounded-lg border p-3 transition-all ${theme.card} ${isFocus ? 'ring-1 ring-indigo-500 border-indigo-500' : ''}`}
               >
                 <div className="flex items-center gap-3 mb-2">
-                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs shrink-0">
-                        {/* {kp.name} */}
-                        {kp.name?.charAt(0).toUpperCase()}
-                    </div>
-                    <input
+                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs shrink-0">
+                    {/* {kp.name} */}
+                    {kp.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <input
                     value={kp.name}
                     onChange={(e) =>
-                        setKeypoints((prev) =>
+                      setKeypoints((prev) =>
                         prev.map((k) =>
-                            k.id === kp.id ? { ...k, name: e.target.value } : k
+                          k.id === kp.id ? { ...k, name: e.target.value } : k
                         )
-                        )
+                      )
                     }
                     className={`flex-1 text-sm font-semibold rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 ${theme.input}`}
-                    />
-                     <button
-                        onClick={() => deleteKeypoint(kp.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-red-500 hover:bg-red-50 rounded transition-all"
-                        title="Delete Point"
-                    >
-                        <Trash2 size={14} />
-                    </button>
+                  />
+                  <button
+                    onClick={() => deleteKeypoint(kp.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-red-500 hover:bg-red-50 rounded transition-all"
+                    title="Delete Point"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
 
                 <div className="flex items-center justify-between text-xs">
-                     <div className="flex items-center gap-1 text-slate-500">
-                        <LinkIcon size={10} />
-                        <span className="truncate max-w-[120px]">
-                            {linked.length ? linked.join(", ") : "No links"}
-                        </span>
-                     </div>
-                     <button
-                        onClick={() => setActiveKp(kp.id)}
-                        className={`text-[10px] font-medium px-2 py-0.5 rounded border ${isFocus ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-500'}`}
-                    >
-                        {/*isFocus ? 'FOCUSED' : 'FOCUS'*/}
-                    </button>
+                  <div className="flex items-center gap-1 text-slate-500">
+                    <LinkIcon size={10} />
+                    <span className="truncate max-w-[120px]">
+                      {linked.length ? linked.join(", ") : "No links"}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setActiveKp(kp.id)}
+                    className={`text-[10px] font-medium px-2 py-0.5 rounded border ${isFocus ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-500'}`}
+                  >
+                    {/*isFocus ? 'FOCUSED' : 'FOCUS'*/}
+                  </button>
                 </div>
               </div>
             );
@@ -334,11 +420,11 @@ export default function KeypointAnnotator() {
       <main className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto relative">
         {!imageObj ? (
           // CHANGED: Use Label instead of Div to make it clickable
-          <label 
+          <label
             className={`flex flex-col items-center justify-center w-full max-w-2xl h-96 border-2 border-dashed rounded-xl cursor-pointer transition-all ${theme.uploadBox}`}
           >
             <div className="bg-slate-200 dark:bg-slate-700 p-5 rounded-full mb-4">
-                <ImagePlus className="w-10 h-10 text-indigo-500" />
+              <ImagePlus className="w-10 h-10 text-indigo-500" />
             </div>
             <h3 className="text-xl font-bold mb-2">Click to Upload Image</h3>
             <p className={theme.subText}>Or drag and drop a file here</p>
@@ -356,9 +442,12 @@ export default function KeypointAnnotator() {
             >
               <Layer>
                 <KonvaImage
+                  ref={imageRef}
                   image={imageObj}
                   width={stageSize.w}
                   height={stageSize.h}
+                  filters={getFilters()}
+                  brightness={activeFilter === "Contrast" ? 0.2 : 0} // Example if using Brighten for contrast/brightness
                 />
               </Layer>
 
@@ -405,28 +494,28 @@ export default function KeypointAnnotator() {
                       shadowBlur={4}
                       shadowOpacity={0.5}
                     />
-                    
+
                     {/* The Label (Fixed for visibility) */}
                     <Label x={10} y={-24} opacity={0.9}>
-                        <Tag 
-                            fill="#1e293b" // Slate-800 background
-                            cornerRadius={4}
-                            pointerDirection="left"
-                            pointerWidth={6}
-                            pointerHeight={6}
-                            lineJoin="round"
-                            shadowColor="black"
-                            shadowBlur={5}
-                            shadowOpacity={0.3}
-                        />
-                        <Text 
-                            text={kp.name} 
-                            fontFamily="sans-serif"
-                            fontSize={12} 
-                            padding={6} 
-                            fill="white"
-                            fontStyle="bold"
-                        />
+                      <Tag
+                        fill="#1e293b" // Slate-800 background
+                        cornerRadius={4}
+                        pointerDirection="left"
+                        pointerWidth={6}
+                        pointerHeight={6}
+                        lineJoin="round"
+                        shadowColor="black"
+                        shadowBlur={5}
+                        shadowOpacity={0.3}
+                      />
+                      <Text
+                        text={kp.name}
+                        fontFamily="sans-serif"
+                        fontSize={12}
+                        padding={6}
+                        fill="white"
+                        fontStyle="bold"
+                      />
                     </Label>
                   </Group>
                 ))}
@@ -435,6 +524,47 @@ export default function KeypointAnnotator() {
           </div>
         )}
       </main>
+
+      {/* ===== RIGHT SIDEBAR: SAVED TEMPLATES ===== */}
+      <div className="relative flex h-full">
+        <button
+          onClick={() => setShowRightSidebar(!showRightSidebar)}
+          className={`absolute top-1/2 -left-3 transform -translate-y-1/2 z-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full p-1 shadow-md text-slate-500 hover:text-indigo-500 transition-colors ${showRightSidebar ? '' : 'rotate-180'}`}
+        >
+          <ChevronRight size={14} />
+        </button>
+
+        <aside
+          className={`flex-shrink-0 border-l flex flex-col shadow-xl z-10 transition-all duration-300 overflow-hidden ${theme.sidebar}`}
+          style={{ width: showRightSidebar ? '18rem' : '0px', opacity: showRightSidebar ? 1 : 0 }}
+        >
+          <div className="p-5 border-b border-inherit">
+            <h3 className={`text-xs font-bold uppercase tracking-wider ${theme.subText}`}>Saved templates</h3>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar min-w-[18rem]">
+            {skeletons.length === 0 ? (
+              <div className={`text-xs opacity-50 italic text-center py-10 ${theme.subText}`}>No saved skeletons</div>
+            ) : (
+              <div className="space-y-2">
+                {skeletons.map(sk => (
+                  <button
+                    key={sk.id}
+                    onClick={() => applySkeleton(sk)}
+                    className={`w-full flex items-center justify-between p-3 rounded-lg border text-left transition-all hover:border-indigo-400 group ${theme.card}`}
+                  >
+                    <div>
+                      <span className="font-semibold text-sm block">{sk.name}</span>
+                      <span className={`text-[10px] ${theme.subText}`}>{sk.keypoints.length} nodes</span>
+                    </div>
+                    <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 text-indigo-500" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
