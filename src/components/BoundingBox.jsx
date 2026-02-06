@@ -1,4 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import Snackbar from "../utils/snackbar";
 import {
     Stage,
     Layer,
@@ -45,6 +47,14 @@ export default function BoundingBoxAnnotator() {
     // Filter State
     const [activeFilter, setActiveFilter] = useState("None");
     const imageRef = useRef(null);
+
+    const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+    // Helper function to trigger it
+    const showToast = (message, type = "success") => {
+        setToast({ show: true, message, type });
+    };
+
 
     /* ================= EFFECTS ================= */
     useEffect(() => {
@@ -137,26 +147,57 @@ export default function BoundingBoxAnnotator() {
 
     /* ================= SAVE ================= */
     const handleSave = () => {
-        if (!rectangles.length) return;
+        if (!rectangles.length || !imageObj) return;
 
-        // Simple JSON export for now
-        const data = {
-            image: fileName,
-            boxes: rectangles.map(r => ({
-                label: r.name,
-                x: r.x,
-                y: r.y,
-                w: r.w,
-                h: r.h
-            }))
-        };
+        const imgW = stageSize.w;
+        const imgH = stageSize.h;
 
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const yoloLines = rectangles.map((r, idx) => {
+            const xCenter = (r.x + r.w / 2) / imgW;
+            const yCenter = (r.y + r.h / 2) / imgH;
+            const wNorm = r.w / imgW;
+            const hNorm = r.h / imgH;
+
+            const classId = 0; // TODO: replace with real class mapping
+
+            return [
+                classId,
+                xCenter.toFixed(6),
+                yCenter.toFixed(6),
+                wNorm.toFixed(6),
+                hNorm.toFixed(6),
+            ].join(" ");
+        });
+
+        const blob = new Blob([yoloLines.join("\n")], { type: "text/plain" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = fileName.replace(/\.[^/.]+$/, "") + "_bbox.json";
+        a.download = fileName.replace(/\.[^/.]+$/, "") + "_bbox.txt";
         a.click();
+        showToast("Annotation saved successfully!", "success");
     };
+
+    // const handleSave = () => {
+    //     if (!rectangles.length) return;
+
+    //     // Simple JSON export for now
+    //     const data = {
+    //         image: fileName,
+    //         boxes: rectangles.map(r => ({
+    //             label: r.name,
+    //             x: r.x,
+    //             y: r.y,
+    //             w: r.w,
+    //             h: r.h
+    //         }))
+    //     };
+
+    //     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    //     const a = document.createElement("a");
+    //     a.href = URL.createObjectURL(blob);
+    //     a.download = fileName.replace(/\.[^/.]+$/, "") + "_bbox.json";
+    //     a.click();
+    // };
 
     /* ================= FILTERS ================= */
     const getFilters = () => {
@@ -193,7 +234,9 @@ export default function BoundingBoxAnnotator() {
                 <div className="p-5 border-b border-inherit flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Square className="w-6 h-6 text-indigo-500" />
+                        <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
                         <h1 className="font-bold text-xl tracking-tight">PixelBox</h1>
+                       </Link>
                     </div>
                     <button
                         onClick={() => setIsDarkMode(!isDarkMode)}
@@ -432,6 +475,12 @@ export default function BoundingBoxAnnotator() {
                                 />
                             </Layer>
                         </Stage>
+                        <Snackbar 
+                            show={toast.show} 
+                            message={toast.message} 
+                            type={toast.type} 
+                            onClose={() => setToast({ ...toast, show: false })} 
+                          />
                     </div>
                 )}
             </main>

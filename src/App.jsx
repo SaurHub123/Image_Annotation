@@ -24,7 +24,7 @@ import DownloadPage from "./components/Download";
 
 function Home() {
   useEffect(() => {
-    document.title = "PixelLabel Suite • AI Annotation Tools";
+    document.title = "Pixel Suite • Annotation Tools";
   }, []);
 
   const tools = [
@@ -74,13 +74,13 @@ function Home() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Layers className="w-6 h-6 text-indigo-600" />
-            <span className="font-bold text-xl tracking-tight text-slate-900">PixelLabel<span className="text-indigo-600">Suite</span></span>
+            <span className="font-bold text-xl tracking-tight text-slate-900">Pixel<span className="text-indigo-600">Suite</span></span>
           </div>
           <div className="flex items-center gap-6 text-sm font-medium text-slate-500">
             <Link to="/download" className="hover:text-indigo-600 transition-colors flex items-center gap-1 font-semibold text-indigo-600">
               <Download size={16} /> Download
             </Link>
-            <a href="https://github.com/SaurHub123" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">
+            <a href="#" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">
               GitHub
             </a>
           </div>
@@ -94,7 +94,7 @@ function Home() {
         <div className="max-w-4xl mx-auto px-6 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-6 border border-indigo-100">
             <Cpu size={14} />
-            <span>v2.0 Now Available</span>
+            <span>v1.0.0</span>
           </div>
 
           <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight mb-8 leading-tight">
@@ -111,19 +111,24 @@ function Home() {
           </p>
 
           <div className="flex items-center justify-center gap-4">
-            <Link to="/editor" className="group px-8 py-4 rounded-xl bg-slate-900 text-white font-bold text-lg shadow-lg hover:bg-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2">
+            {/* <Link to="#tools" className="group px-8 py-4 rounded-xl bg-slate-900 text-white font-bold text-lg shadow-lg hover:bg-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2">
               Get Started
               <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link to="/viewer" className="px-8 py-4 rounded-xl bg-white text-slate-700 font-bold text-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all">
-              View Demo
-            </Link>
+            </Link> */}
+            <a
+              href="#tools"
+              className="group px-8 py-4 rounded-xl bg-slate-900 text-white font-bold text-lg shadow-lg hover:bg-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2"
+            >
+              Get Started
+              <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+            </a>
+
           </div>
         </div>
       </section>
 
       {/* Tools Grid */}
-      <section className="max-w-7xl mx-auto px-6 pb-24">
+      <section className="max-w-7xl mx-auto px-6 pb-24" id="tools">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {tools.map((tool) => (
             <Link
@@ -155,7 +160,7 @@ function Home() {
       <section className="bg-white border-y border-slate-100 py-24">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Why Researchers Choose PixelLabel</h2>
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Why Researchers Choose Pixel<span className="text-indigo-600">Suite</span></h2>
             <p className="text-slate-500 max-w-2xl mx-auto">Built by developers for developers. We focus on speed, accuracy, and standardization.</p>
           </div>
 
@@ -199,7 +204,7 @@ function Home() {
               <WifiOff size={14} />
               <span>Offline Support</span>
             </div>
-            <h2 className="text-4xl font-bold mb-4 leading-tight">Take PixelLabel Offline</h2>
+            <h2 className="text-4xl font-bold mb-4 leading-tight">Take Pixel Offline</h2>
             <p className="text-indigo-200 text-lg mb-8 leading-relaxed">
               Download the desktop application for Windows, macOS, and Linux.
               Annotate significantly larger datasets with native performance and complete privacy.
@@ -221,7 +226,7 @@ function Home() {
                   <div className="w-3 h-3 rounded-full bg-amber-500" />
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
                 </div>
-                <div className="text-xs text-slate-400 font-mono ml-4">PixelLabel Desktop</div>
+                <div className="text-xs text-slate-400 font-mono ml-4">Pixel Desktop</div>
               </div>
               <div className="space-y-3">
                 <div className="h-32 bg-slate-900/50 rounded-lg border border-slate-700/50 flex items-center justify-center">
@@ -242,9 +247,9 @@ function Home() {
       <footer className="bg-slate-50 border-t border-slate-200 py-12 text-center text-slate-500 text-sm">
         <div className="flex items-center justify-center gap-2 mb-4 opacity-50">
           <Layers size={18} />
-          <span className="font-bold">PixelLabel Suite</span>
+          <span className="font-bold">Pixel Suite</span>
         </div>
-        <p>© 2024 AI Annotation Tools. Open Source Project.</p>
+        <p>© 2026 Annotation Tools. Open Source Project.</p>
       </footer>
 
     </div >

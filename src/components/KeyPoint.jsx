@@ -1,4 +1,6 @@
 import React, { useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import Snackbar from "../utils/snackbar";
 import {
   Stage,
   Layer,
@@ -70,6 +72,16 @@ export default function KeypointAnnotator() {
   const [activeFilter, setActiveFilter] = useState("None");
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const imageRef = useRef(null);
+
+  // Add state at the top with other hooks
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+  // Helper function to trigger it
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+  };
+
+  
 
   // Connection State
   const [connectionSource, setConnectionSource] = useState(null);
@@ -248,6 +260,7 @@ export default function KeypointAnnotator() {
     ordered.forEach((k) => parts.push(nx(k.x), ny(k.y), k.visibility));
 
     downloadText(parts.join(" "), fileName.replace(/\..+$/, "") + ".txt");
+    showToast("Annotation saved successfully!", "success");
   };
 
   /* ================= UI CLASSES ================= */
@@ -275,7 +288,9 @@ export default function KeypointAnnotator() {
         <div className="p-5 border-b border-inherit flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Crosshair className="w-6 h-6 text-indigo-500" />
+            <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
             <h1 className="font-bold text-xl tracking-tight">PixelPoint</h1>
+            </Link>
           </div>
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
@@ -521,6 +536,12 @@ export default function KeypointAnnotator() {
                 ))}
               </Layer>
             </Stage>
+            <Snackbar 
+    show={toast.show} 
+    message={toast.message} 
+    type={toast.type} 
+    onClose={() => setToast({ ...toast, show: false })} 
+  />
           </div>
         )}
       </main>

@@ -4,7 +4,7 @@
 
 PixelLabel Suite is a comprehensive, web-based image annotation platform designed for computer vision researchers and developers. It provides a unified interface for creating high-quality datasets with pixel-perfect precision.
 
-> **Designed and Developed by [Saurabh Kumar](https://github.com/SaurHub123)**  
+> **Designed and Developed by [Saurabh Kumar](https://saurabh-codes.onrender.com/)**  
 > 🔗 **Repository**: [https://github.com/SaurHub123/Image_Annotation](https://github.com/SaurHub123/Image_Annotation)
 
 ---
@@ -107,4 +107,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
-*Made with ❤️ by [Saurabh Kumar](https://github.com/SaurHub123)*
+*Made with ❤️ by [Saurabh Kumar](https://saurabh-codes.onrender.com/)*

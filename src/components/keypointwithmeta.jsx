@@ -1,5 +1,3 @@
-
-
 import React, { useState } from "react";
 import { Stage, Layer, Image as KonvaImage, Line, Circle, Rect, Group, Text } from "react-konva";
 import { Upload, Eye, FileJson, FileText, Image as ImageIcon, Box } from "lucide-react";

@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Stage, Layer, Image as KonvaImage, Line, Circle, Group, Label, Tag, Text } from "react-konva";
+import { Link } from "react-router-dom";
+import Snackbar from "../utils/snackbar";
 import Konva from "konva";
 import {
   Download,
@@ -14,7 +16,7 @@ import {
   Undo,
   Pentagon,
   ChevronRight,
-  Layers
+  Layers,
 } from "lucide-react";
 
 /* ================= HELPERS (Preserved) ================= */
@@ -61,7 +63,13 @@ export default function Editor() {
   const [currentPoints, setCurrentPoints] = useState([]);
   const [mousePos, setMousePos] = useState(null);
   const [activeShapeId, setActiveShapeId] = useState(null);
-
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  
+    // Helper function to trigger it
+  const showToast = (message, type = "success") => {
+      setToast({ show: true, message, type });
+  };
+  
   // Filter State
   const [activeFilter, setActiveFilter] = useState("None");
   const imageRef = useRef(null);
@@ -171,47 +179,86 @@ export default function Editor() {
 
   /* ================= SAVE ================= */
   const handleSave = () => {
-    if (!imageObj) return;
+  if (!imageObj || !shapes.length) return;
 
-    // COCO-like export structure preserved
-    const categories = [{ id: 1, name: "object" }];
-    const annotations = shapes.map((shape, index) => {
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const imgW = stageSize.w;
+  const imgH = stageSize.h;
 
-      for (let i = 0; i < shape.points.length; i += 2) {
-        const x = shape.points[i];
-        const y = shape.points[i + 1];
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
-      }
+  const yoloLines = shapes.map((shape) => {
+    // Remove duplicated closing point (last 2 values)
+    const pts = shape.points.slice(0, -2);
 
-      return {
-        id: index + 1,
-        image_id: 1,
-        category_id: 1,
-        segmentation: [shape.points],
-        area: calculatePolygonArea(shape.points),
-        bbox: [minX, minY, maxX - minX, maxY - minY],
-        iscrowd: 0
-      };
-    });
+    const normalized = [];
+    for (let i = 0; i < pts.length; i += 2) {
+      const x = pts[i] / imgW;
+      const y = pts[i + 1] / imgH;
 
-    const cocoData = {
-      info: { year: new Date().getFullYear(), version: "1.0", description: "Exported from PixelPoly" },
-      licenses: [],
-      images: [{ id: 1, width: stageSize.w, height: stageSize.h, file_name: fileName }],
-      categories,
-      annotations
-    };
+      // Clamp for safety
+      normalized.push(
+        Math.min(Math.max(x, 0), 1).toFixed(6),
+        Math.min(Math.max(y, 0), 1).toFixed(6)
+      );
+    }
 
-    const baseName = fileName.replace(/\.[^/.]+$/, "");
-    downloadJSON(cocoData, `${baseName}_coco.json`);
-    // Optional: download screenshot too like before?
-    // const dataURL = stageRef.current.toDataURL({ pixelRatio: 2 });
-    // downloadURI(dataURL, `${baseName}_annotated.png`);
-  };
+    const classId = 0; // change later if you add classes
+    return `${classId} ${normalized.join(" ")}`;
+  });
+
+  const blob = new Blob([yoloLines.join("\n")], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+
+  const baseName = fileName.replace(/\.[^/.]+$/, "");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${baseName}.txt`;
+  a.click();
+
+  showToast("YOLOv8 segmentation labels saved!", "success");
+};
+
+  // const handleSave = () => {
+  //   if (!imageObj) return;
+
+  //   // COCO-like export structure preserved
+  //   const categories = [{ id: 1, name: "object" }];
+  //   const annotations = shapes.map((shape, index) => {
+  //     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+  //     for (let i = 0; i < shape.points.length; i += 2) {
+  //       const x = shape.points[i];
+  //       const y = shape.points[i + 1];
+  //       minX = Math.min(minX, x);
+  //       minY = Math.min(minY, y);
+  //       maxX = Math.max(maxX, x);
+  //       maxY = Math.max(maxY, y);
+  //     }
+
+  //     return {
+  //       id: index + 1,
+  //       image_id: 1,
+  //       category_id: 1,
+  //       segmentation: [shape.points],
+  //       area: calculatePolygonArea(shape.points),
+  //       bbox: [minX, minY, maxX - minX, maxY - minY],
+  //       iscrowd: 0
+  //     };
+  //   });
+
+  //   const cocoData = {
+  //     info: { year: new Date().getFullYear(), version: "1.0", description: "Exported from PixelPoly" },
+  //     licenses: [],
+  //     images: [{ id: 1, width: stageSize.w, height: stageSize.h, file_name: fileName }],
+  //     categories,
+  //     annotations
+  //   };
+
+  //   const baseName = fileName.replace(/\.[^/.]+$/, "");
+  //   downloadJSON(cocoData, `${baseName}_coco.json`);
+  //   showToast("Annotation saved successfully!", "success");
+  //   // Optional: download screenshot too like before?
+  //   // const dataURL = stageRef.current.toDataURL({ pixelRatio: 2 });
+  //   // downloadURI(dataURL, `${baseName}_annotated.png`);
+  // };
 
   /* ================= RENDER HELPERS ================= */
   const previewPoints = useMemo(() => {
@@ -252,7 +299,9 @@ export default function Editor() {
         <div className="p-5 border-b border-inherit flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Pentagon className="w-6 h-6 text-indigo-500" />
+            <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
             <h1 className="font-bold text-xl tracking-tight">PixelPoly</h1>
+            </Link>
           </div>
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
@@ -483,6 +532,13 @@ export default function Editor() {
                 )}
               </Layer>
             </Stage>
+            <Snackbar 
+                show={toast.show} 
+                message={toast.message} 
+                type={toast.type} 
+                onClose={() => setToast({ ...toast, show: false })} 
+              />
+
           </div>
         )}
       </main>

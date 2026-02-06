@@ -16,34 +16,38 @@ export default function DownloadPage() {
         {
             os: "Windows",
             icon: <Monitor className="w-8 h-8" />,
-            version: "v2.0.0",
+            version: "v1.0.0",
             arch: "x64",
-            size: "145 MB",
+            size: "45 MB",
             color: "bg-blue-600",
             hover: "hover:bg-blue-700",
-            link: "#" // Placeholder
+            link: "#",//"https://github.com/SaurHub123/Image_Annotation", // Placeholder
+            button: "Not Available"
         },
         {
             os: "macOS",
             icon: <Apple className="w-8 h-8" />,
-            version: "v2.0.0",
-            arch: "Apple Silicon (M1/M2) & Intel",
-            size: "138 MB",
+            version: "v1.0.0",
+            arch: "Apple M & Intel",
+            size: "38 MB",
             color: "bg-slate-900",
             hover: "hover:bg-slate-800",
-            link: "#"
+            link: "#",
+            button: "Not Available"
         },
         {
             os: "Linux",
             icon: <Monitor className="w-8 h-8" />, // Using monitor for generic linux/terminal feel or code icon
-            version: "v2.0.0",
+            version: "v1.0.0",
             arch: "Debian/Ubuntu",
-            size: "120 MB",
+            size: "20 MB",
             color: "bg-orange-600",
             hover: "hover:bg-orange-700",
-            link: "#"
+            link: "#",
+            button: "Not Available"
         }
     ];
+
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
@@ -52,7 +56,7 @@ export default function DownloadPage() {
             <nav className="border-b bg-white sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                     <Link to="/" className="font-bold text-xl tracking-tight text-slate-900 flex items-center gap-2">
-                        PixelLabel<span className="text-indigo-600">Suite</span>
+                        Pixel<span className="text-indigo-600">Suite</span>
                     </Link>
                     <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
                         Back to Home
@@ -66,7 +70,7 @@ export default function DownloadPage() {
                     Download for Desktop
                 </h1>
                 <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-10">
-                    Experience the full power of PixelLabel Suite offline.
+                    Experience the full power of Pixel Suite offline.
                     Native performance, local file system access, and enhanced privacy.
                 </p>
             </section>
@@ -98,8 +102,9 @@ export default function DownloadPage() {
                                     href={v.link}
                                     className={`w-full block py-3 rounded-xl font-bold text-white transition-colors ${v.color} ${v.hover} shadow-lg shadow-indigo-500/10 flex items-center justify-center gap-2`}
                                 >
+                                    {/* Not Available */}
                                     <Download size={18} />
-                                    Download
+                                    {v.button} 
                                 </a>
                             </div>
                         </div>

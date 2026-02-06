@@ -64,74 +64,141 @@ export default function AnnotationViewer() {
     setRects([]);
   };
 
-  const parseCOCO = (coco) => {
-    const newLines = [];
-    const newRects = [];
-    const cmap = {};
-    if (Array.isArray(coco.categories)) {
-      coco.categories.forEach((c) => {
-        cmap[c.id] = c.name ?? `class_${c.id}`;
-      });
+  // const parseCOCO = (coco) => {
+  //   const newLines = [];
+  //   const newRects = [];
+  //   const cmap = {};
+  //   if (Array.isArray(coco.categories)) {
+  //     coco.categories.forEach((c) => {
+  //       cmap[c.id] = c.name ?? `class_${c.id}`;
+  //     });
+  //   }
+
+  //   if (Array.isArray(coco.images) && coco.images[0]) {
+  //     const im = coco.images[0];
+  //     if (Number.isFinite(im.width) && Number.isFinite(im.height)) {
+  //       setStageSize({ w: im.width, h: im.height });
+  //     }
+  //   }
+
+  //   const anns = Array.isArray(coco.annotations) ? coco.annotations : [];
+  //   anns.forEach((a) => {
+  //     const cat = a.category_id ?? 0;
+  //     const color = palette[Math.abs(cat) % palette.length];
+  //     const label = cmap[cat] ?? `class_${cat}`;
+
+  //     if (Array.isArray(a.segmentation) && a.segmentation.length > 0) {
+  //       const seg = a.segmentation[0];
+  //       if (Array.isArray(seg) && seg.length >= 4) {
+  //         newLines.push({ points: seg, color, strokeWidth, label });
+  //       }
+  //     }
+
+  //     if (Array.isArray(a.bbox) && a.bbox.length === 4) {
+  //       const [x, y, w, h] = a.bbox;
+  //       newRects.push({ x, y, w, h, color, label });
+  //     }
+  //   });
+
+  //   setCategoryMap(cmap);
+  //   setLines(newLines);
+  //   setRects(newRects);
+  // };
+
+  const parseYOLOSegmentation = (text) => {
+  const newLines = [];
+  const newRects = [];
+
+  const imgW = stageSize.w;
+  const imgH = stageSize.h;
+
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+  lines.forEach((line, idx) => {
+    const parts = line.split(/\s+/).map(Number);
+    if (parts.length < 3) return;
+
+    const classId = parts[0];
+    const coords = parts.slice(1);
+
+    const color = palette[Math.abs(classId) % palette.length];
+    const label = `class_${classId}`;
+
+    const points = [];
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    for (let i = 0; i < coords.length; i += 2) {
+      const x = coords[i] * imgW;
+      const y = coords[i + 1] * imgH;
+
+      points.push(x, y);
+
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
     }
 
-    if (Array.isArray(coco.images) && coco.images[0]) {
-      const im = coco.images[0];
-      if (Number.isFinite(im.width) && Number.isFinite(im.height)) {
-        setStageSize({ w: im.width, h: im.height });
-      }
-    }
+    newLines.push({ points, color, strokeWidth, label });
 
-    const anns = Array.isArray(coco.annotations) ? coco.annotations : [];
-    anns.forEach((a) => {
-      const cat = a.category_id ?? 0;
-      const color = palette[Math.abs(cat) % palette.length];
-      const label = cmap[cat] ?? `class_${cat}`;
-
-      if (Array.isArray(a.segmentation) && a.segmentation.length > 0) {
-        const seg = a.segmentation[0];
-        if (Array.isArray(seg) && seg.length >= 4) {
-          newLines.push({ points: seg, color, strokeWidth, label });
-        }
-      }
-
-      if (Array.isArray(a.bbox) && a.bbox.length === 4) {
-        const [x, y, w, h] = a.bbox;
-        newRects.push({ x, y, w, h, color, label });
-      }
+    newRects.push({
+      x: minX,
+      y: minY,
+      w: maxX - minX,
+      h: maxY - minY,
+      color,
+      label
     });
+  });
 
-    setCategoryMap(cmap);
-    setLines(newLines);
-    setRects(newRects);
-  };
+  setLines(newLines);
+  setRects(newRects);
+};
 
-  const handleUploadCOCO = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const coco = JSON.parse(text);
-      const cocoImage = Array.isArray(coco.images) && coco.images[0] ? coco.images[0] : null;
-      const cocoFileName = cocoImage?.file_name || "";
 
-      if (imageFileName) {
-        if (cocoFileName) {
-          if (cocoFileName !== imageFileName) {
-            alert(`⚠ File name mismatch.\nUploaded: ${imageFileName}\nCOCO: ${cocoFileName}`);
-          }
-        }
-      } else if (cocoFileName) {
-        alert(`ℹ COCO expects image: ${cocoFileName}. You haven't uploaded an image yet.`);
-      }
+const handleUploadYOLO = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-      parseCOCO(coco);
-    } catch (err) {
-      alert("Invalid COCO JSON.");
-      console.error(err);
-    } finally {
-      e.target.value = "";
-    }
-  };
+  try {
+    const text = await file.text();
+    parseYOLOSegmentation(text);
+  } catch (err) {
+    alert("Invalid YOLOv8 segmentation file.");
+    console.error(err);
+  } finally {
+    e.target.value = "";
+  }
+};
+
+
+  // const handleUploadCOCO = async (e) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file) return;
+  //   try {
+  //     const text = await file.text();
+  //     const coco = JSON.parse(text);
+  //     const cocoImage = Array.isArray(coco.images) && coco.images[0] ? coco.images[0] : null;
+  //     const cocoFileName = cocoImage?.file_name || "";
+
+  //     if (imageFileName) {
+  //       if (cocoFileName) {
+  //         if (cocoFileName !== imageFileName) {
+  //           alert(`⚠ File name mismatch.\nUploaded: ${imageFileName}\nCOCO: ${cocoFileName}`);
+  //         }
+  //       }
+  //     } else if (cocoFileName) {
+  //       alert(`ℹ COCO expects image: ${cocoFileName}. You haven't uploaded an image yet.`);
+  //     }
+
+  //     parseCOCO(coco);
+  //   } catch (err) {
+  //     alert("Invalid COCO JSON.");
+  //     console.error(err);
+  //   } finally {
+  //     e.target.value = "";
+  //   }
+  // };
 
   const clearAll = () => {
     setLines([]);
@@ -194,9 +261,10 @@ export default function AnnotationViewer() {
             </label>
 
             <label className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:border-slate-300 cursor-pointer transition-all shadow-sm">
-              <input type="file" accept="application/json" className="hidden" onChange={handleUploadCOCO} />
-              <Icons.UploadJson />
-              Load JSON
+              {/* <input type="file" accept="application/json" className="hidden" onChange={handleUploadCOCO} /> */}
+              <input type="file" accept=".txt" onChange={handleUploadYOLO} />
+              <Icons.Upload />
+              Load Yolo
             </label>
 
             <button 
