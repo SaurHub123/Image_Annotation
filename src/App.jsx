@@ -21,6 +21,8 @@ import SkeletonEditor from "./components/skeletonPage";
 import KeypointVisualizer from "./components/keyValidator";
 import BoundingBoxAnnotator from "./components/BoundingBox";
 import DownloadPage from "./components/Download";
+import MobileRestriction from "./components/MobileRestriction";
+import NotFound from "./components/NotFound";
 
 function Home() {
   useEffect(() => {
@@ -260,13 +262,56 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/editor" element={<Editor />} />
-      <Route path="/viewer" element={<AnnotationViewer />} />
-      <Route path="/keypoints" element={<KeypointAnnotator />} />
-      <Route path="/skeletons" element={<SkeletonEditor />} />
-      <Route path="/bbox" element={<BoundingBoxAnnotator />} />
-      <Route path="/validator" element={<KeypointVisualizer />} />
+      <Route
+        path="/editor"
+        element={
+          <MobileRestriction>
+            <Editor />
+          </MobileRestriction>
+        }
+      />
+      <Route
+        path="/viewer"
+        element={
+          <MobileRestriction>
+            <AnnotationViewer />
+          </MobileRestriction>
+        }
+      />
+      <Route
+        path="/keypoints"
+        element={
+          <MobileRestriction>
+            <KeypointAnnotator />
+          </MobileRestriction>
+        }
+      />
+      <Route
+        path="/skeletons"
+        element={
+          <MobileRestriction>
+            <SkeletonEditor />
+          </MobileRestriction>
+        }
+      />
+      <Route
+        path="/bbox"
+        element={
+          <MobileRestriction>
+            <BoundingBoxAnnotator />
+          </MobileRestriction>
+        }
+      />
+      <Route
+        path="/validator"
+        element={
+          <MobileRestriction>
+            <KeypointVisualizer />
+          </MobileRestriction>
+        }
+      />
       <Route path="/download" element={<DownloadPage />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
