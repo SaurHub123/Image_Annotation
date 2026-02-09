@@ -5,21 +5,25 @@ import Snackbar from "../utils/snackbar";
 import Konva from "konva";
 import {
   Download,
-  Upload,
-  Link as LinkIcon,
+  FolderOpen,
   Trash2,
   Sun,
   Moon,
-  Crosshair,
   ImagePlus,
   Palette,
   Undo,
   Pentagon,
+  ChevronLeft,
   ChevronRight,
-  Layers,
+  CheckCircle2,
+  Clock,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  Layers
 } from "lucide-react";
 
-/* ================= HELPERS (Preserved) ================= */
+/* ================= HELPERS ================= */
 const calculatePolygonArea = (vertices) => {
   let area = 0;
   const n = vertices.length;
@@ -33,29 +37,24 @@ const calculatePolygonArea = (vertices) => {
   return Math.abs(area / 2);
 };
 
-const downloadURI = (uri, name) => {
-  const link = document.createElement("a");
-  link.download = name;
-  link.href = uri;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
-const downloadJSON = (data, name) => {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  downloadURI(url, name);
-};
-
-/* ================= COMPONENT ================= */
 export default function Editor() {
   const stageRef = useRef(null);
+  const imageRef = useRef(null);
 
-  // Theme State
+  // Theme & UI State
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  const [isListExpanded, setIsListExpanded] = useState(true); // Sidebar Accordion
+  const [isImageNavExpanded, setIsImageNavExpanded] = useState(false); // Header Accordion
 
-  // App State
+  // Folder & File State
+  const [inputDirHandle, setInputDirHandle] = useState(null);
+  const [outputDirHandle, setOutputDirHandle] = useState(null);
+  const [files, setFiles] = useState([]); 
+  const [viewIndex, setViewIndex] = useState(0); 
+  const [loading, setLoading] = useState(false);
+
+  // Annotation State
   const [imageObj, setImageObj] = useState(null);
   const [fileName, setFileName] = useState("");
   const [stageSize, setStageSize] = useState({ w: 900, h: 600 });
@@ -63,22 +62,12 @@ export default function Editor() {
   const [currentPoints, setCurrentPoints] = useState([]);
   const [mousePos, setMousePos] = useState(null);
   const [activeShapeId, setActiveShapeId] = useState(null);
-  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
-  
-    // Helper function to trigger it
-  const showToast = (message, type = "success") => {
-      setToast({ show: true, message, type });
-  };
-  
-  // Filter State
   const [activeFilter, setActiveFilter] = useState("None");
-  const imageRef = useRef(null);
 
   const isDrawing = currentPoints.length > 0;
 
-  /* ================= EFFECTS ================= */
   useEffect(() => {
-    document.title = "PixelPoly • Polygon Annotator";
+    document.title = "PixelPoly • Folder Annotator";
   }, []);
 
   useEffect(() => {
@@ -87,193 +76,137 @@ export default function Editor() {
     }
   }, [imageObj, activeFilter, stageSize]);
 
-  /* ================= UPLOAD ================= */
-  const handleUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+  };
 
+  /* ================= FOLDER LOGIC ================= */
+  const handleOpenFolders = async () => {
+    try {
+      const inputHandle = await window.showDirectoryPicker();
+      const outputHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+      setInputDirHandle(inputHandle);
+      setOutputDirHandle(outputHandle);
+      await scanDirectory(inputHandle, outputHandle);
+      showToast("Folders synced successfully");
+    } catch (err) {
+      console.error("Folder selection cancelled", err);
+    }
+  };
+
+  const scanDirectory = async (input, output) => {
+    if (!input || !output) return;
+    setLoading(true);
+    const validFiles = [];
+    const annotatedSet = new Set();
+
+    for await (const entry of output.values()) {
+      if (entry.name.endsWith(".txt")) {
+        annotatedSet.add(entry.name.replace(".txt", ""));
+      }
+    }
+
+    for await (const entry of input.values()) {
+      if (entry.kind === "file" && /\.(jpe?g|png|webp|bmp)$/i.test(entry.name)) {
+        const file = await entry.getFile();
+        const baseName = entry.name.replace(/\.[^/.]+$/, "");
+        validFiles.push({
+          handle: entry,
+          name: entry.name,
+          url: URL.createObjectURL(file),
+          isAnnotated: annotatedSet.has(baseName)
+        });
+      }
+    }
+    setFiles(validFiles);
+    setLoading(false);
+  };
+
+  const handleSelectImage = async (fileData) => {
+    const file = await fileData.handle.getFile();
     const img = new Image();
     img.onload = () => {
       const scale = Math.min(900 / img.width, 1);
-      setStageSize({
-        w: Math.round(img.width * scale),
-        h: Math.round(img.height * scale),
-      });
+      setStageSize({ w: Math.round(img.width * scale), h: Math.round(img.height * scale) });
       setImageObj(img);
-      setFileName(file.name);
+      setFileName(fileData.name);
       setShapes([]);
       setCurrentPoints([]);
     };
-    img.src = URL.createObjectURL(file);
+    img.src = fileData.url;
   };
 
-  /* ================= DRAWING LOGIC (Preserved & Adapted) ================= */
+  /* ================= DRAWING & SAVING LOGIC ================= */
   const getRelativePointerPosition = (node) => {
-    const transform = node.getAbsoluteTransform().copy();
-    transform.invert();
+    const transform = node.getAbsoluteTransform().copy().invert();
     const pos = node.getStage().getPointerPosition();
     return transform.point(pos);
   };
 
   const handleStageClick = (e) => {
-    if (!imageObj) return;
-
-    // If clicking on a shape, select it (unless creating new point)
-    // Here we prioritize drawing
-    if (e.target.attrs.id === "closer") return;
-
-    const stage = e.target.getStage();
-    const { x, y } = getRelativePointerPosition(stage);
+    if (!imageObj || e.target.attrs.id === "closer") return;
+    const { x, y } = getRelativePointerPosition(e.target.getStage());
     setCurrentPoints((prev) => [...prev, x, y]);
   };
 
   const handleMouseMove = (e) => {
     if (!imageObj) return;
-    const stage = e.target.getStage();
-    const pos = getRelativePointerPosition(stage);
-    setMousePos(pos);
+    setMousePos(getRelativePointerPosition(e.target.getStage()));
   };
 
   const handleCloseShape = () => {
     if (currentPoints.length < 6) return;
-
-    const startX = currentPoints[0];
-    const startY = currentPoints[1];
-    const closedPoints = [...currentPoints, startX, startY];
-
-    const newShape = {
+    const closedPoints = [...currentPoints, currentPoints[0], currentPoints[1]];
+    setShapes([...shapes, {
       id: Date.now(),
-      name: `Poly ${shapes.length + 1}`, // Added name for list
+      name: `Poly ${shapes.length + 1}`,
       points: closedPoints,
       color: Konva.Util.getRandomColor()
-    };
-
-    setShapes([...shapes, newShape]);
+    }]);
     setCurrentPoints([]);
     setMousePos(null);
   };
 
   const handleUndo = () => {
-    if (isDrawing) {
-      setCurrentPoints((prev) => prev.slice(0, -2));
-    } else {
-      setShapes((prev) => prev.slice(0, -1));
+    isDrawing ? setCurrentPoints(p => p.slice(0, -2)) : setShapes(s => s.slice(0, -1));
+  };
+
+  const handleSave = async () => {
+    if (!imageObj || !shapes.length || !outputDirHandle) return;
+    
+    const imgW = stageSize.w;
+    const imgH = stageSize.h;
+    const yoloLines = shapes.map((shape) => {
+      const pts = shape.points.slice(0, -2);
+      const normalized = [];
+      for (let i = 0; i < pts.length; i += 2) {
+        normalized.push((pts[i] / imgW).toFixed(6), (pts[i + 1] / imgH).toFixed(6));
+      }
+      return `0 ${normalized.join(" ")}`;
+    }).join("\n");
+
+    try {
+      const baseName = fileName.replace(/\.[^/.]+$/, "");
+      const outputFileName = `${baseName}.txt`;
+      const fileHandle = await outputDirHandle.getFileHandle(outputFileName, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(yoloLines);
+      await writable.close();
+      
+      setFiles(prev => prev.map(f => f.name === fileName ? { ...f, isAnnotated: true } : f));
+      showToast(`Saved ${outputFileName}`);
+    } catch (err) {
+      showToast("Error saving file", "error");
     }
   };
 
-  const deleteShape = (id) => {
-    setShapes(prev => prev.filter(s => s.id !== id));
-    if (activeShapeId === id) setActiveShapeId(null);
-  };
-
-  /* ================= FILTERS ================= */
   const getFilters = () => {
     switch (activeFilter) {
       case "Grayscale": return [Konva.Filters.Grayscale];
       case "Invert": return [Konva.Filters.Invert];
-      case "Contrast": return [Konva.Filters.Brighten];
-      case "Sepia": return [Konva.Filters.Sepia];
       default: return [];
     }
   };
-
-  /* ================= SAVE ================= */
-  const handleSave = () => {
-  if (!imageObj || !shapes.length) return;
-
-  const imgW = stageSize.w;
-  const imgH = stageSize.h;
-
-  const yoloLines = shapes.map((shape) => {
-    // Remove duplicated closing point (last 2 values)
-    const pts = shape.points.slice(0, -2);
-
-    const normalized = [];
-    for (let i = 0; i < pts.length; i += 2) {
-      const x = pts[i] / imgW;
-      const y = pts[i + 1] / imgH;
-
-      // Clamp for safety
-      normalized.push(
-        Math.min(Math.max(x, 0), 1).toFixed(6),
-        Math.min(Math.max(y, 0), 1).toFixed(6)
-      );
-    }
-
-    const classId = 0; // change later if you add classes
-    return `${classId} ${normalized.join(" ")}`;
-  });
-
-  const blob = new Blob([yoloLines.join("\n")], { type: "text/plain" });
-  const url = URL.createObjectURL(blob);
-
-  const baseName = fileName.replace(/\.[^/.]+$/, "");
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${baseName}.txt`;
-  a.click();
-
-  showToast("YOLOv8 segmentation labels saved!", "success");
-};
-
-  // const handleSave = () => {
-  //   if (!imageObj) return;
-
-  //   // COCO-like export structure preserved
-  //   const categories = [{ id: 1, name: "object" }];
-  //   const annotations = shapes.map((shape, index) => {
-  //     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-  //     for (let i = 0; i < shape.points.length; i += 2) {
-  //       const x = shape.points[i];
-  //       const y = shape.points[i + 1];
-  //       minX = Math.min(minX, x);
-  //       minY = Math.min(minY, y);
-  //       maxX = Math.max(maxX, x);
-  //       maxY = Math.max(maxY, y);
-  //     }
-
-  //     return {
-  //       id: index + 1,
-  //       image_id: 1,
-  //       category_id: 1,
-  //       segmentation: [shape.points],
-  //       area: calculatePolygonArea(shape.points),
-  //       bbox: [minX, minY, maxX - minX, maxY - minY],
-  //       iscrowd: 0
-  //     };
-  //   });
-
-  //   const cocoData = {
-  //     info: { year: new Date().getFullYear(), version: "1.0", description: "Exported from PixelPoly" },
-  //     licenses: [],
-  //     images: [{ id: 1, width: stageSize.w, height: stageSize.h, file_name: fileName }],
-  //     categories,
-  //     annotations
-  //   };
-
-  //   const baseName = fileName.replace(/\.[^/.]+$/, "");
-  //   downloadJSON(cocoData, `${baseName}_coco.json`);
-  //   showToast("Annotation saved successfully!", "success");
-  //   // Optional: download screenshot too like before?
-  //   // const dataURL = stageRef.current.toDataURL({ pixelRatio: 2 });
-  //   // downloadURI(dataURL, `${baseName}_annotated.png`);
-  // };
-
-  /* ================= RENDER HELPERS ================= */
-  const previewPoints = useMemo(() => {
-    if (!mousePos || currentPoints.length === 0) return currentPoints;
-    return [...currentPoints, mousePos.x, mousePos.y];
-  }, [currentPoints, mousePos]);
-
-  const isOverStart = useMemo(() => {
-    if (currentPoints.length < 6 || !mousePos) return false;
-    const startX = currentPoints[0];
-    const startY = currentPoints[1];
-    const dist = Math.hypot(mousePos.x - startX, mousePos.y - startY);
-    return dist < 10;
-  }, [currentPoints, mousePos]);
-
 
   /* ================= UI CLASSES ================= */
   const theme = {
@@ -282,266 +215,209 @@ export default function Editor() {
     text: isDarkMode ? "text-slate-100" : "text-slate-800",
     subText: isDarkMode ? "text-slate-400" : "text-slate-500",
     card: isDarkMode ? "bg-slate-700/50 border-slate-600" : "bg-white border-slate-200",
-    input: isDarkMode ? "bg-slate-900 border-slate-600 text-white" : "bg-slate-50 border-slate-300 text-slate-900",
     buttonSecondary: isDarkMode ? "bg-slate-700 hover:bg-slate-600 text-white" : "bg-slate-200 hover:bg-slate-300 text-slate-800",
-    uploadBox: isDarkMode
-      ? "border-slate-700 bg-slate-800/50 hover:bg-slate-800 hover:border-indigo-500"
-      : "border-slate-300 bg-slate-100 hover:bg-white hover:border-indigo-500",
   };
 
+  const previewPoints = useMemo(() => (!mousePos || currentPoints.length === 0) ? currentPoints : [...currentPoints, mousePos.x, mousePos.y], [currentPoints, mousePos]);
+  const isOverStart = useMemo(() => (currentPoints.length >= 6 && mousePos) ? Math.hypot(mousePos.x - currentPoints[0], mousePos.y - currentPoints[1]) < 10 : false, [currentPoints, mousePos]);
+
   return (
-    <div className={`flex h-screen w-full transition-colors duration-300 ${theme.bg} ${theme.text}`}>
-
-      {/* ===== SIDEBAR ===== */}
-      <aside className={`w-80 flex-shrink-0 border-r flex flex-col shadow-xl z-10 transition-colors duration-300 ${theme.sidebar}`}>
-
-        {/* Header */}
-        <div className="p-5 border-b border-inherit flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Pentagon className="w-6 h-6 text-indigo-500" />
-            <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
-            <h1 className="font-bold text-xl tracking-tight">PixelPoly</h1>
-            </Link>
-          </div>
-          <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className={`p-2 rounded-full transition-all ${isDarkMode ? 'bg-slate-700 hover:bg-slate-600' : 'bg-slate-100 hover:bg-slate-200'}`}
-          >
-            {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-indigo-600" />}
-          </button>
-        </div>
-
-        {/* Controls */}
-        <div className="p-4 space-y-3 border-b border-inherit">
-          <label className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg cursor-pointer transition-colors shadow-lg shadow-indigo-500/20">
-            <Upload size={18} />
-            Upload Image
-            <input hidden type="file" accept="image/*" onChange={handleUpload} />
-          </label>
-
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={handleUndo}
-              disabled={!shapes.length && !isDrawing}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all ${theme.buttonSecondary} ${(!shapes.length && !isDrawing) && 'opacity-50 cursor-not-allowed'}`}
+    <div className={`flex flex-col h-screen w-full transition-colors duration-300 ${theme.bg} ${theme.text}`}>
+      
+      {/* ===== TOP IMAGE LIST ACCORDION ===== */}
+      <div className={`border-b transition-all duration-300 ${theme.sidebar} ${isImageNavExpanded ? 'py-6' : 'h-16'}`}>
+        <div className="flex items-center justify-between px-8 h-full">
+          
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setViewIndex(Math.max(0, viewIndex - 1))}
+              className={`p-1.5 rounded-full ${theme.buttonSecondary} disabled:opacity-20`}
+              disabled={viewIndex === 0}
             >
-              <Undo size={16} /> Undo
+              <ChevronLeft size={18} />
             </button>
-            <button
-              onClick={handleSave}
-              disabled={!shapes.length}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors ${!shapes.length ? "opacity-50 cursor-not-allowed " + theme.buttonSecondary : "bg-sky-600 hover:bg-sky-700 text-white shadow-lg shadow-sky-500/20"
-                }`}
+            <button 
+              onClick={() => setIsImageNavExpanded(!isImageNavExpanded)}
+              className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors group"
             >
-              <Download size={16} />
-              Save
+              <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Images</span>
+              {isImageNavExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
           </div>
-        </div>
 
-        {/* Filters */}
-        <div className="px-4 pb-4 border-b border-inherit pt-3">
-          <div className="flex items-center gap-2 mb-2 text-xs font-bold uppercase tracking-wider opacity-50">
-            <Palette size={12} />
-            <span>Filters</span>
-          </div>
-          <div className="grid grid-cols-3 gap-1.5">
-            {["None", "Grayscale", "Invert"].map(f => (
-              <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                className={`text-xs py-1.5 rounded border transition-all ${activeFilter === f
-                    ? "bg-indigo-600 border-indigo-600 text-white shadow-sm"
-                    : theme.buttonSecondary
-                  }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        </div>
+          <div className="flex-1 flex justify-center px-4 overflow-hidden">
+            {files.length > 0 ? (
+              <div className={`flex items-center gap-4 transition-all duration-300 ${isImageNavExpanded ? 'flex-wrap justify-center' : 'flex-nowrap'}`}>
+                {files.slice(viewIndex, viewIndex + 10).map((file) => (
+                  <div 
+                    key={file.name}
+                    onClick={() => handleSelectImage(file)}
+                    className="flex flex-col items-center gap-2 cursor-pointer group"
+                  >
+                    {/* Default View: Name and Status Circle */}
+                    <div className={`flex items-center gap-2 px-2 py-1 rounded-md border transition-all ${
+                      fileName === file.name ? 'bg-indigo-500/10 border-indigo-500/30' : 'border-transparent hover:border-slate-300'
+                    }`}>
+                      <div className={`w-2.5 h-2.5 rounded-full ${file.isAnnotated ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                      <span className={`text-[11px] truncate max-w-[100px] ${fileName === file.name ? 'font-bold text-indigo-500' : 'font-medium opacity-70'}`}>
+                        {file.name}
+                      </span>
+                    </div>
 
-        {/* Saved Shapes List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-          <div className="flex items-center justify-between">
-            <h3 className={`text-xs font-bold uppercase tracking-wider ${theme.subText}`}>
-              Polygons ({shapes.length})
-            </h3>
-            {shapes.length > 0 && (
-              <span className="text-xs text-indigo-500 cursor-pointer hover:underline" onClick={() => setShapes([])}>Clear All</span>
+                    {/* Accordion View: Thumbnails */}
+                    {isImageNavExpanded && (
+                      <div className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                        fileName === file.name ? 'border-indigo-500 ring-4 ring-indigo-500/10' : 'border-slate-200 dark:border-slate-700'
+                      }`}>
+                        <img src={file.url} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <span className="text-xs italic opacity-30">Load folders to see images</span>
             )}
           </div>
 
-          {!shapes.length && (
-            <div className={`text-center py-10 ${theme.subText} text-sm`}>
-              Start clicking on the image<br />to draw a polygon.
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setViewIndex(Math.min(files.length - 10, viewIndex + 1))}
+              className={`p-1.5 rounded-full ${theme.buttonSecondary} disabled:opacity-20`}
+              disabled={files.length <= viewIndex + 10}
+            >
+              <ChevronRight size={18} />
+            </button>
+            <div className="pl-4 border-l border-inherit flex flex-col items-end">
+                <span className="text-[10px] font-bold text-indigo-500">{files.filter(f => f.isAnnotated).length}/{files.length}</span>
+                <span className="text-[8px] uppercase tracking-tighter opacity-40 font-bold">Progress</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* ===== SIDEBAR ===== */}
+        <aside className={`w-80 flex-shrink-0 border-r flex flex-col shadow-xl z-10 ${theme.sidebar}`}>
+          <div className="p-5 border-b border-inherit flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Pentagon className="w-6 h-6 text-indigo-500" />
+              <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
+              <h1 className="font-bold text-xl tracking-tight">PixelPoly</h1>
+              </Link>
+            </div>
+            <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
+              {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-indigo-600" />}
+            </button>
+          </div>
+
+          <div className="p-4 space-y-3 border-b border-inherit">
+            <button onClick={handleOpenFolders} className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-all shadow-md">
+              <FolderOpen size={18} /> Open Project Folder
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={handleUndo} disabled={!shapes.length && !isDrawing} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${theme.buttonSecondary} disabled:opacity-50`}>
+                <Undo size={16} /> Undo
+              </button>
+              <button onClick={handleSave} disabled={!shapes.length} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${!shapes.length ? "opacity-50 " + theme.buttonSecondary : "bg-sky-600 text-white shadow-lg"}`}>
+                <Download size={16} /> Save
+              </button>
+            </div>
+          </div>
+
+          {/* SIDEBAR POLYGON ACCORDION */}
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <div 
+              onClick={() => setIsListExpanded(!isListExpanded)}
+              className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-inherit"
+            >
+              <div className="flex items-center gap-2">
+                <Layers size={16} className="text-indigo-500" />
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Polygons ({shapes.length})</h3>
+              </div>
+              {isListExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </div>
+
+            {isListExpanded && (
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {shapes.length === 0 && <div className="text-center py-10 opacity-30 text-xs italic">No polygons drawn</div>}
+                {shapes.map((shape) => (
+                  <div key={shape.id} onClick={() => setActiveShapeId(shape.id)} className={`group rounded-lg border p-2.5 cursor-pointer transition-all ${theme.card} ${activeShapeId === shape.id ? 'ring-2 ring-indigo-500 border-indigo-500' : 'hover:border-slate-400'}`}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: shape.color || '#6366f1' }} />
+                      <input
+                        value={shape.name}
+                        onChange={(e) => setShapes(prev => prev.map(item => item.id === shape.id ? { ...item, name: e.target.value } : item))}
+                        className="flex-1 text-sm bg-transparent focus:outline-none border-none p-0"
+                      />
+                      <button onClick={(e) => { e.stopPropagation(); setShapes(s => s.filter(x => x.id !== shape.id)); }} className="opacity-0 group-hover:opacity-100 p-1 text-red-500 rounded">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 border-t border-inherit">
+            <div className="flex items-center gap-2 mb-2 text-[10px] font-bold uppercase opacity-40"><Palette size={12} /> Filters</div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {["None", "Grayscale", "Invert"].map(f => (
+                <button key={f} onClick={() => setActiveFilter(f)} className={`text-[10px] py-1.5 rounded font-bold transition-all ${activeFilter === f ? "bg-indigo-600 text-white shadow-md" : theme.buttonSecondary}`}>
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        {/* ===== CANVAS AREA ===== */}
+        <main className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto relative">
+          {!imageObj ? (
+            <div onClick={handleOpenFolders} className="flex flex-col items-center justify-center w-full max-w-2xl h-96 border-2 border-dashed rounded-3xl cursor-pointer bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-slate-300 dark:border-slate-700">
+              <div className="p-6 bg-indigo-500/10 rounded-full mb-4 text-indigo-500"><ImagePlus size={48} /></div>
+              <h3 className="text-2xl font-bold mb-1">PixelPoly Workspace</h3>
+              <p className={theme.subText}>Select folders to start your project</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-6">
+              {/* <div className={`px-6 py-2 rounded-full text-sm font-bold flex items-center gap-3 border shadow-sm ${
+                files.find(f => f.name === fileName)?.isAnnotated 
+                ? "bg-green-500/10 text-green-600 border-green-200 dark:border-green-500/30" 
+                : "bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-500/30"
+              }`}>
+                {files.find(f => f.name === fileName)?.isAnnotated ? <><CheckCircle2 size={18}/> Saved</> : <><Clock size={18}/> Unsaved</>}
+                <span className="opacity-20 font-light">|</span>
+                <span className="opacity-90">{fileName}</span>
+              </div> */}
+
+              <div className="shadow-2xl rounded-xl overflow-hidden border-4 border-white dark:border-slate-800">
+                <Stage ref={stageRef} width={stageSize.w} height={stageSize.h} onMouseDown={handleStageClick} onMouseMove={handleMouseMove} className={isDrawing ? "cursor-crosshair" : "cursor-default"}>
+                  <Layer><KonvaImage ref={imageRef} image={imageObj} width={stageSize.w} height={stageSize.h} filters={getFilters()} /></Layer>
+                  <Layer>
+                    {shapes.map((shape) => (
+                      <Group key={shape.id} onClick={(e) => { e.cancelBubble = true; setActiveShapeId(shape.id); }}>
+                        <Line points={shape.points} closed stroke={shape.color || "#00FF00"} strokeWidth={2} fill={activeShapeId === shape.id ? (shape.color || "#00FF00") + "66" : (shape.color || "#00FF00") + "33"} />
+                        <Label x={shape.points[0]} y={shape.points[1] - 20}><Tag fill="#1e293b" pointerDirection="down" /><Text text={shape.name} fill="white" padding={4} fontSize={11} /></Label>
+                      </Group>
+                    ))}
+                    {isDrawing && (
+                      <>
+                        <Line points={previewPoints} stroke="#6366f1" strokeWidth={2} dash={[4, 4]} />
+                        {currentPoints.map((val, i) => i % 2 === 0 && (
+                          <Circle key={i} x={val} y={currentPoints[i + 1]} radius={i === 0 ? 6 : 3.5} fill={i === 0 && isOverStart ? "#ef4444" : "#ffffff"} stroke="#6366f1" id={i === 0 ? "closer" : undefined} onClick={i === 0 ? handleCloseShape : undefined} />
+                        ))}
+                      </>
+                    )}
+                  </Layer>
+                </Stage>
+              </div>
             </div>
           )}
-
-          {shapes.map((shape, i) => (
-            <div
-              key={shape.id}
-              onClick={() => setActiveShapeId(shape.id)}
-              className={`group relative rounded-lg border p-3 transition-all cursor-pointer ${theme.card} ${activeShapeId === shape.id ? 'ring-1 ring-indigo-500 border-indigo-500' : ''}`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: shape.color || '#6366f1' }} />
-
-                <input
-                  value={shape.name}
-                  onChange={(e) =>
-                    setShapes((prev) =>
-                      prev.map((item) =>
-                        item.id === shape.id ? { ...item, name: e.target.value } : item
-                      )
-                    )
-                  }
-                  onClick={(e) => e.stopPropagation()}
-                  className={`flex-1 text-sm font-semibold rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 ${theme.input} bg-transparent`}
-                />
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteShape(shape.id);
-                  }}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 text-red-500 hover:bg-red-50 rounded transition-all"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-              <div className="mt-2 text-[10px] opacity-60 font-mono">
-                Points: {shape.points.length / 2}
-              </div>
-            </div>
-          ))}
-        </div>
-      </aside>
-
-      {/* ===== CANVAS AREA ===== */}
-      <main className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto relative">
-        {!imageObj ? (
-          <label
-            className={`flex flex-col items-center justify-center w-full max-w-2xl h-96 border-2 border-dashed rounded-xl cursor-pointer transition-all ${theme.uploadBox}`}
-          >
-            <div className="bg-slate-200 dark:bg-slate-700 p-5 rounded-full mb-4">
-              <ImagePlus className="w-10 h-10 text-indigo-500" />
-            </div>
-            <h3 className="text-xl font-bold mb-2">Click to Upload Image</h3>
-            <p className={theme.subText}>Or drag and drop a file here</p>
-            <input hidden type="file" accept="image/*" onChange={handleUpload} />
-          </label>
-        ) : (
-          <div className="shadow-2xl rounded-lg overflow-hidden border border-slate-500/20">
-            <Stage
-              ref={stageRef}
-              width={stageSize.w}
-              height={stageSize.h}
-              onMouseDown={handleStageClick}
-              onMouseMove={handleMouseMove}
-              className={isDrawing ? "cursor-crosshair" : "cursor-default"}
-            >
-              <Layer>
-                <KonvaImage
-                  ref={imageRef}
-                  image={imageObj}
-                  width={stageSize.w}
-                  height={stageSize.h}
-                  filters={getFilters()}
-                  brightness={activeFilter === "Contrast" ? 0.2 : 0}
-                />
-              </Layer>
-
-              <Layer>
-                {shapes.map((shape) => (
-                  <Group key={shape.id} onClick={(e) => { e.cancelBubble = true; setActiveShapeId(shape.id); }}>
-                    <Line
-                      points={shape.points}
-                      closed={true}
-                      stroke={shape.color || "#00FF00"}
-                      strokeWidth={2}
-                      fill={activeShapeId === shape.id ? (shape.color || "#00FF00") + "66" : (shape.color || "#00FF00") + "33"}
-                    />
-                    {/* Label for the shape */}
-                    {shape.points.length > 0 && (
-                      <Label
-                        x={shape.points[0]}
-                        y={shape.points[1] - 20}
-                        opacity={0.9}
-                      >
-                        <Tag
-                          fill="#1e293b"
-                          pointerDirection="down"
-                          pointerWidth={6}
-                          pointerHeight={6}
-                          lineJoin="round"
-                        />
-                        <Text
-                          text={shape.name}
-                          fontFamily="sans-serif"
-                          fontSize={12}
-                          padding={4}
-                          fill="white"
-                        />
-                      </Label>
-                    )}
-                  </Group>
-                ))}
-
-                {isDrawing && (
-                  <>
-                    <Line
-                      points={previewPoints}
-                      stroke="#6366f1"
-                      strokeWidth={2}
-                      dash={[4, 4]}
-                    />
-                    {currentPoints.map((val, i) => {
-                      if (i % 2 !== 0) return null;
-                      const x = val;
-                      const y = currentPoints[i + 1];
-                      const isStart = i === 0;
-
-                      return (
-                        <Circle
-                          key={i}
-                          x={x}
-                          y={y}
-                          radius={isStart ? 6 : 3.5}
-                          fill={isStart ? (isOverStart ? "#ef4444" : "#6366f1") : "#ffffff"}
-                          stroke={isStart ? (isOverStart ? "#ffffff" : "#ffffff") : "#6366f1"}
-                          strokeWidth={isStart ? 2 : 1.5}
-                          id={isStart ? "closer" : undefined}
-                          onClick={isStart ? handleCloseShape : undefined}
-                          onMouseEnter={(e) => {
-                            if (isStart) {
-                              e.target.scale({ x: 1.3, y: 1.3 });
-                              document.body.style.cursor = 'pointer';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (isStart) {
-                              e.target.scale({ x: 1, y: 1 });
-                              document.body.style.cursor = 'crosshair';
-                            }
-                          }}
-                        />
-                      );
-                    })}
-                  </>
-                )}
-              </Layer>
-            </Stage>
-            <Snackbar 
-                show={toast.show} 
-                message={toast.message} 
-                type={toast.type} 
-                onClose={() => setToast({ ...toast, show: false })} 
-              />
-
-          </div>
-        )}
-      </main>
+          <Snackbar show={toast.show} message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />
+        </main>
+      </div>
     </div>
   );
 }

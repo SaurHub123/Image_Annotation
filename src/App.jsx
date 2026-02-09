@@ -82,9 +82,9 @@ function Home() {
             <Link to="/download" className="hover:text-indigo-600 transition-colors flex items-center gap-1 font-semibold text-indigo-600">
               <Download size={16} /> Download
             </Link>
-            <a href="#" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">
+            {/* <a href="#" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">
               GitHub
-            </a>
+            </a> */}
           </div>
         </div>
       </nav>
