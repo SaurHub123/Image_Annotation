@@ -15,10 +15,18 @@ import {
   Image as ImageIcon,
   X
 } from "lucide-react";
+import { useTour } from "../context/TourContext";
+import SEO from "./SEO";
 
 const SIZE = 600;
 
 export default function SkeletonEditor() {
+  const { startTour } = useTour();
+
+  useEffect(() => {
+    startTour('skeleton');
+  }, [startTour]);
+
   /* ===== STATE ===== */
   const [skeletons, setSkeletons] = useState([]);
   const [activeId, setActiveId] = useState(null);
@@ -30,7 +38,7 @@ export default function SkeletonEditor() {
   const [connectMode, setConnectMode] = useState(false);
   const [source, setSource] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  
+
   // New States for Reference Image
   const [bgImage, setBgImage] = useState(null);
   const [imageOpacity, setImageOpacity] = useState(0.5);
@@ -166,14 +174,14 @@ export default function SkeletonEditor() {
 
   return (
     <div className={`flex h-screen w-full transition-colors duration-300 ${theme.bg} ${theme.text}`}>
-      
+
       {/* Hidden File Input */}
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        className="hidden" 
-        accept="image/*" 
-        onChange={handleImageUpload} 
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/*"
+        onChange={handleImageUpload}
       />
 
       {/* ===== LEFT SIDEBAR ===== */}
@@ -182,7 +190,7 @@ export default function SkeletonEditor() {
           <div className="flex items-center gap-2">
             <Bone className="w-6 h-6 text-indigo-500" />
             <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
-            <h1 className="font-bold text-xl tracking-tight">PixelSkeleton</h1>
+              <h1 className="font-bold text-xl tracking-tight">PixelSkeleton</h1>
             </Link>
           </div>
           <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-2 rounded-full transition-all ${isDarkMode ? 'bg-slate-700 hover:bg-slate-600' : 'bg-slate-100 hover:bg-slate-200'}`}>
@@ -190,7 +198,7 @@ export default function SkeletonEditor() {
           </button>
         </div>
 
-        <div className="p-4 space-y-3 border-b border-inherit">
+        <div className="tour-node-panel p-4 space-y-3 border-b border-inherit">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -201,7 +209,7 @@ export default function SkeletonEditor() {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setConnectMode(!connectMode)}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all ${connectMode ? "bg-emerald-500 text-white" : theme.buttonSecondary}`}
+              className={`tour-edge-btn flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all ${connectMode ? "bg-emerald-500 text-white" : theme.buttonSecondary}`}
             >
               <LinkIcon size={16} /> {connectMode ? "Linking..." : "Link Mode"}
             </button>
@@ -218,16 +226,16 @@ export default function SkeletonEditor() {
             >
               <ImageIcon size={16} /> {bgImage ? "Change Reference" : "Upload Reference"}
             </button>
-            
+
             {bgImage && (
               <div className="px-1">
                 <div className="flex justify-between text-[10px] uppercase font-bold mb-1 opacity-60">
                   <span>Image Opacity</span>
                   <span>{Math.round(imageOpacity * 100)}%</span>
                 </div>
-                <input 
-                  type="range" min="0" max="1" step="0.01" 
-                  value={imageOpacity} 
+                <input
+                  type="range" min="0" max="1" step="0.01"
+                  value={imageOpacity}
                   onChange={(e) => setImageOpacity(parseFloat(e.target.value))}
                   className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                 />
@@ -275,7 +283,7 @@ export default function SkeletonEditor() {
             <Layer>
               {/* 1. Background Rect */}
               <Rect width={SIZE} height={SIZE} fill="transparent" name="background" />
-              
+
               {/* 2. Reference Image */}
               {bgImage && (
                 <KonvaImage
@@ -284,7 +292,7 @@ export default function SkeletonEditor() {
                   height={SIZE}
                   opacity={imageOpacity}
                   name="refImage"
-                  // Maintains aspect ratio logic could be added here
+                // Maintains aspect ratio logic could be added here
                 />
               )}
 
@@ -334,16 +342,16 @@ export default function SkeletonEditor() {
             </Layer>
           </Stage>
 
-          <Snackbar 
-    show={toast.show} 
-    message={toast.message} 
-    type={toast.type} 
-    onClose={() => setToast({ ...toast, show: false })} 
-  />
-          
+          <Snackbar
+            show={toast.show}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast({ ...toast, show: false })}
+          />
+
           {/* Clear Image Overlay Button */}
           {bgImage && (
-            <button 
+            <button
               onClick={() => setBgImage(null)}
               className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-all"
               title="Remove Background"
@@ -358,7 +366,7 @@ export default function SkeletonEditor() {
       </main>
 
       {/* ===== RIGHT SIDEBAR ===== */}
-      <aside className={`w-72 flex-shrink-0 border-l flex flex-col shadow-xl z-10 transition-colors duration-300 ${theme.sidebar}`}>
+      <aside className={`tour-templates w-72 flex-shrink-0 border-l flex flex-col shadow-xl z-10 transition-colors duration-300 ${theme.sidebar}`}>
         <div className="p-5 border-b border-inherit">
           <h3 className={`text-xs font-bold uppercase tracking-wider ${theme.subText}`}>Saved templates</h3>
         </div>
@@ -380,6 +388,11 @@ export default function SkeletonEditor() {
           ))}
         </div>
       </aside>
+      <SEO
+        title="PixelSkeleton • Skeleton Creator"
+        description="Design custom skeleton structures for keypoint annotation tasks. visual editor for node and edge definitions."
+        keywords="skeleton, graph, nodes, edges, structure definition"
+      />
     </div>
   );
 }

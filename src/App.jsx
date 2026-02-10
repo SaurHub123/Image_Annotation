@@ -1,5 +1,6 @@
 import { Routes, Route, Link } from "react-router-dom";
 import { useEffect } from "react";
+import { useTour } from "./context/TourContext";
 import {
   PenTool,
   BoxSelect,
@@ -21,13 +22,19 @@ import SkeletonEditor from "./components/skeletonPage";
 import KeypointVisualizer from "./components/keyValidator";
 import BoundingBoxAnnotator from "./components/BoundingBox";
 import DownloadPage from "./components/Download";
+import { TourProvider } from "./context/TourContext";
+import TourContainer from "./components/Tour/TourContainer";
+import * as allSteps from "./config/tourSteps";
 import MobileRestriction from "./components/MobileRestriction";
 import NotFound from "./components/NotFound";
+import SEO from "./components/SEO";
 
 function Home() {
   useEffect(() => {
     document.title = "Pixel Suite • Annotation Tools";
   }, []);
+
+
 
   const tools = [
     {
@@ -68,63 +75,73 @@ function Home() {
     }
   ];
 
+  // ... inside Home ...
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-indigo-100">
+      <HomeContent tools={tools} />
+    </div>
+  );
+}
 
+// Separate component to use the hook
+const HomeContent = ({ tools }) => {
+  const { startTour } = useTour();
+
+  useEffect(() => {
+    // Start home tour on mount
+    startTour('home');
+  }, [startTour]);
+
+  return (
+    <>
       {/* Navigation */}
       <nav className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 tour-nav-logo">
             <Layers className="w-6 h-6 text-indigo-600" />
             <span className="font-bold text-xl tracking-tight text-slate-900">Pixel<span className="text-indigo-600">Suite</span></span>
           </div>
           <div className="flex items-center gap-6 text-sm font-medium text-slate-500">
-            <Link to="/download" className="hover:text-indigo-600 transition-colors flex items-center gap-1 font-semibold text-indigo-600">
+            <Link to="/download" className="hover:text-indigo-600 transition-colors flex items-center gap-1 font-semibold text-indigo-600 tour-download-link">
               <Download size={16} /> Download
             </Link>
-            {/* <a href="#" target="_blank" rel="noreferrer" className="hover:text-slate-900 transition-colors">
-              GitHub
-            </a> */}
           </div>
         </div>
       </nav>
 
+      <SEO
+        title="PixelSuite • AI Annotation Tools"
+        description="A unified platform for image annotation. Label polygons, bounding boxes, keypoints, and skeletons with precision."
+        keywords="annotation, AI, computer vision, polygon, bounding box, keypoint, skeleton"
+      />
+
       {/* Hero Section */}
       <section className="relative pt-20 pb-32 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-indigo-200/20 rounded-full blur-3xl -z-10" />
-
         <div className="max-w-4xl mx-auto px-6 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-6 border border-indigo-100">
             <Cpu size={14} />
             <span>v1.0.0</span>
           </div>
-
           <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight mb-8 leading-tight">
             The Modern Suite for <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">
               Computer Vision Data
             </span>
           </h1>
-
           <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
             A unified platform for all your image annotation needs.
             Label polygons, bounding boxes, and keypoints with pixel-perfect precision.
             Export to COCO format instantly.
           </p>
-
           <div className="flex items-center justify-center gap-4">
-            {/* <Link to="#tools" className="group px-8 py-4 rounded-xl bg-slate-900 text-white font-bold text-lg shadow-lg hover:bg-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2">
-              Get Started
-              <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-            </Link> */}
             <a
               href="#tools"
-              className="group px-8 py-4 rounded-xl bg-slate-900 text-white font-bold text-lg shadow-lg hover:bg-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2"
+              className="tour-get-started group px-8 py-4 rounded-xl bg-slate-900 text-white font-bold text-lg shadow-lg hover:bg-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2"
             >
               Get Started
               <ArrowRight className="group-hover:translate-x-1 transition-transform" />
             </a>
-
           </div>
         </div>
       </section>
@@ -136,14 +153,12 @@ function Home() {
             <Link
               key={tool.id}
               to={tool.path}
-              className="group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300 relative overflow-hidden"
+              className={`group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300 relative overflow-hidden tour-tool-${tool.id}`}
             >
               <div className={`absolute top-0 right-0 w-24 h-24 ${tool.color} opacity-5 rounded-bl-full group-hover:scale-110 transition-transform`} />
-
               <div className={`w-12 h-12 rounded-xl ${tool.color} text-white flex items-center justify-center mb-6 shadow-md group-hover:scale-110 transition-transform duration-300`}>
                 {tool.icon}
               </div>
-
               <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">
                 {tool.name}
               </h3>
@@ -165,7 +180,6 @@ function Home() {
             <h2 className="text-3xl font-bold text-slate-900 mb-4">Why Researchers Choose Pixel<span className="text-indigo-600">Suite</span></h2>
             <p className="text-slate-500 max-w-2xl mx-auto">Built by developers for developers. We focus on speed, accuracy, and standardization.</p>
           </div>
-
           <div className="grid md:grid-cols-3 gap-12">
             {[
               {
@@ -194,8 +208,6 @@ function Home() {
           </div>
         </div>
       </section>
-
-
 
       {/* Desktop App Promo */}
       <section className="bg-gradient-to-br from-indigo-900 to-slate-900 py-20 text-white overflow-hidden relative">
@@ -251,67 +263,89 @@ function Home() {
           <Layers size={18} />
           <span className="font-bold">Pixel Suite</span>
         </div>
-        <p>© 2026 Annotation Tools. Open Source Project.</p>
+        <p>© 2026 CSIR-CSIO, Chandigarh.</p>
+        {/* <button
+          onClick={() => {
+            localStorage.removeItem("tourCompleted_home");
+            startTour('home');
+          }}
+          className="mt-4 text-xs text-indigo-500 hover:text-indigo-700 underline"
+        >
+          Replay Tour
+        </button> */}
       </footer>
-
-    </div >
+    </>
   );
-}
+};
+
+// ... HomeContent definition remains locally...
+// Just modifying App and Home return.
 
 export default function App() {
+  const stepsMap = {
+    home: allSteps.homeSteps,
+    bbox: allSteps.bboxSteps,
+    editor: allSteps.editorSteps,
+    keypoint: allSteps.keypointSteps,
+    skeleton: allSteps.skeletonSteps
+  };
+
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route
-        path="/editor"
-        element={
-          <MobileRestriction>
-            <Editor />
-          </MobileRestriction>
-        }
-      />
-      <Route
-        path="/viewer"
-        element={
-          <MobileRestriction>
-            <AnnotationViewer />
-          </MobileRestriction>
-        }
-      />
-      <Route
-        path="/keypoints"
-        element={
-          <MobileRestriction>
-            <KeypointAnnotator />
-          </MobileRestriction>
-        }
-      />
-      <Route
-        path="/skeletons"
-        element={
-          <MobileRestriction>
-            <SkeletonEditor />
-          </MobileRestriction>
-        }
-      />
-      <Route
-        path="/bbox"
-        element={
-          <MobileRestriction>
-            <BoundingBoxAnnotator />
-          </MobileRestriction>
-        }
-      />
-      <Route
-        path="/validator"
-        element={
-          <MobileRestriction>
-            <KeypointVisualizer />
-          </MobileRestriction>
-        }
-      />
-      <Route path="/download" element={<DownloadPage />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <TourProvider stepsMap={stepsMap}>
+      <TourContainer />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route
+          path="/editor"
+          element={
+            <MobileRestriction>
+              <Editor />
+            </MobileRestriction>
+          }
+        />
+        <Route
+          path="/viewer"
+          element={
+            <MobileRestriction>
+              <AnnotationViewer />
+            </MobileRestriction>
+          }
+        />
+        <Route
+          path="/keypoints"
+          element={
+            <MobileRestriction>
+              <KeypointAnnotator />
+            </MobileRestriction>
+          }
+        />
+        <Route
+          path="/skeletons"
+          element={
+            <MobileRestriction>
+              <SkeletonEditor />
+            </MobileRestriction>
+          }
+        />
+        <Route
+          path="/bbox"
+          element={
+            <MobileRestriction>
+              <BoundingBoxAnnotator />
+            </MobileRestriction>
+          }
+        />
+        <Route
+          path="/validator"
+          element={
+            <MobileRestriction>
+              <KeypointVisualizer />
+            </MobileRestriction>
+          }
+        />
+        <Route path="/download" element={<DownloadPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </TourProvider>
   );
 }

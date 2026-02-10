@@ -23,6 +23,9 @@ import {
   Layers
 } from "lucide-react";
 
+import { useTour } from "../context/TourContext";
+import SEO from "./SEO";
+
 /* ================= HELPERS ================= */
 const calculatePolygonArea = (vertices) => {
   let area = 0;
@@ -50,9 +53,16 @@ export default function Editor() {
   // Folder & File State
   const [inputDirHandle, setInputDirHandle] = useState(null);
   const [outputDirHandle, setOutputDirHandle] = useState(null);
-  const [files, setFiles] = useState([]); 
-  const [viewIndex, setViewIndex] = useState(0); 
+  const [files, setFiles] = useState([]);
+  const [viewIndex, setViewIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  /* ===== STATE ===== */
+  const { startTour } = useTour();
+
+  useEffect(() => {
+    startTour('editor');
+  }, [startTour]);
 
   // Annotation State
   const [imageObj, setImageObj] = useState(null);
@@ -173,7 +183,7 @@ export default function Editor() {
 
   const handleSave = async () => {
     if (!imageObj || !shapes.length || !outputDirHandle) return;
-    
+
     const imgW = stageSize.w;
     const imgH = stageSize.h;
     const yoloLines = shapes.map((shape) => {
@@ -192,7 +202,7 @@ export default function Editor() {
       const writable = await fileHandle.createWritable();
       await writable.write(yoloLines);
       await writable.close();
-      
+
       setFiles(prev => prev.map(f => f.name === fileName ? { ...f, isAnnotated: true } : f));
       showToast(`Saved ${outputFileName}`);
     } catch (err) {
@@ -223,20 +233,20 @@ export default function Editor() {
 
   return (
     <div className={`flex flex-col h-screen w-full transition-colors duration-300 ${theme.bg} ${theme.text}`}>
-      
+
       {/* ===== TOP IMAGE LIST ACCORDION ===== */}
       <div className={`border-b transition-all duration-300 ${theme.sidebar} ${isImageNavExpanded ? 'py-6' : 'h-16'}`}>
         <div className="flex items-center justify-between px-8 h-full">
-          
+
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setViewIndex(Math.max(0, viewIndex - 1))}
               className={`p-1.5 rounded-full ${theme.buttonSecondary} disabled:opacity-20`}
               disabled={viewIndex === 0}
             >
               <ChevronLeft size={18} />
             </button>
-            <button 
+            <button
               onClick={() => setIsImageNavExpanded(!isImageNavExpanded)}
               className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors group"
             >
@@ -249,15 +259,14 @@ export default function Editor() {
             {files.length > 0 ? (
               <div className={`flex items-center gap-4 transition-all duration-300 ${isImageNavExpanded ? 'flex-wrap justify-center' : 'flex-nowrap'}`}>
                 {files.slice(viewIndex, viewIndex + 10).map((file) => (
-                  <div 
+                  <div
                     key={file.name}
                     onClick={() => handleSelectImage(file)}
                     className="flex flex-col items-center gap-2 cursor-pointer group"
                   >
                     {/* Default View: Name and Status Circle */}
-                    <div className={`flex items-center gap-2 px-2 py-1 rounded-md border transition-all ${
-                      fileName === file.name ? 'bg-indigo-500/10 border-indigo-500/30' : 'border-transparent hover:border-slate-300'
-                    }`}>
+                    <div className={`flex items-center gap-2 px-2 py-1 rounded-md border transition-all ${fileName === file.name ? 'bg-indigo-500/10 border-indigo-500/30' : 'border-transparent hover:border-slate-300'
+                      }`}>
                       <div className={`w-2.5 h-2.5 rounded-full ${file.isAnnotated ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-300 dark:bg-slate-600'}`} />
                       <span className={`text-[11px] truncate max-w-[100px] ${fileName === file.name ? 'font-bold text-indigo-500' : 'font-medium opacity-70'}`}>
                         {file.name}
@@ -266,9 +275,8 @@ export default function Editor() {
 
                     {/* Accordion View: Thumbnails */}
                     {isImageNavExpanded && (
-                      <div className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                        fileName === file.name ? 'border-indigo-500 ring-4 ring-indigo-500/10' : 'border-slate-200 dark:border-slate-700'
-                      }`}>
+                      <div className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${fileName === file.name ? 'border-indigo-500 ring-4 ring-indigo-500/10' : 'border-slate-200 dark:border-slate-700'
+                        }`}>
                         <img src={file.url} alt="" className="w-full h-full object-cover" />
                       </div>
                     )}
@@ -281,7 +289,7 @@ export default function Editor() {
           </div>
 
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => setViewIndex(Math.min(files.length - 10, viewIndex + 1))}
               className={`p-1.5 rounded-full ${theme.buttonSecondary} disabled:opacity-20`}
               disabled={files.length <= viewIndex + 10}
@@ -289,8 +297,8 @@ export default function Editor() {
               <ChevronRight size={18} />
             </button>
             <div className="pl-4 border-l border-inherit flex flex-col items-end">
-                <span className="text-[10px] font-bold text-indigo-500">{files.filter(f => f.isAnnotated).length}/{files.length}</span>
-                <span className="text-[8px] uppercase tracking-tighter opacity-40 font-bold">Progress</span>
+              <span className="text-[10px] font-bold text-indigo-500">{files.filter(f => f.isAnnotated).length}/{files.length}</span>
+              <span className="text-[8px] uppercase tracking-tighter opacity-40 font-bold">Progress</span>
             </div>
           </div>
         </div>
@@ -298,12 +306,12 @@ export default function Editor() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* ===== SIDEBAR ===== */}
-        <aside className={`w-80 flex-shrink-0 border-r flex flex-col shadow-xl z-10 ${theme.sidebar}`}>
+        <aside className={`tour-toolbar w-80 flex-shrink-0 border-r flex flex-col shadow-xl z-10 ${theme.sidebar}`}>
           <div className="p-5 border-b border-inherit flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Pentagon className="w-6 h-6 text-indigo-500" />
               <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
-              <h1 className="font-bold text-xl tracking-tight">PixelPoly</h1>
+                <h1 className="font-bold text-xl tracking-tight">PixelPoly</h1>
               </Link>
             </div>
             <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
@@ -312,14 +320,14 @@ export default function Editor() {
           </div>
 
           <div className="p-4 space-y-3 border-b border-inherit">
-            <button onClick={handleOpenFolders} className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-all shadow-md">
+            <button onClick={handleOpenFolders} className="tour-upload-btn flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-all shadow-md">
               <FolderOpen size={18} /> Open Project Folder
             </button>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={handleUndo} disabled={!shapes.length && !isDrawing} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${theme.buttonSecondary} disabled:opacity-50`}>
                 <Undo size={16} /> Undo
               </button>
-              <button onClick={handleSave} disabled={!shapes.length} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${!shapes.length ? "opacity-50 " + theme.buttonSecondary : "bg-sky-600 text-white shadow-lg"}`}>
+              <button onClick={handleSave} disabled={!shapes.length} className={`tour-export-btn flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${!shapes.length ? "opacity-50 " + theme.buttonSecondary : "bg-sky-600 text-white shadow-lg"}`}>
                 <Download size={16} /> Save
               </button>
             </div>
@@ -327,7 +335,7 @@ export default function Editor() {
 
           {/* SIDEBAR POLYGON ACCORDION */}
           <div className="flex flex-col flex-1 overflow-hidden">
-            <div 
+            <div
               onClick={() => setIsListExpanded(!isListExpanded)}
               className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-inherit"
             >
@@ -392,7 +400,7 @@ export default function Editor() {
                 <span className="opacity-90">{fileName}</span>
               </div> */}
 
-              <div className="shadow-2xl rounded-xl overflow-hidden border-4 border-white dark:border-slate-800">
+              <div className="tour-canvas shadow-2xl rounded-xl overflow-hidden border-4 border-white dark:border-slate-800">
                 <Stage ref={stageRef} width={stageSize.w} height={stageSize.h} onMouseDown={handleStageClick} onMouseMove={handleMouseMove} className={isDrawing ? "cursor-crosshair" : "cursor-default"}>
                   <Layer><KonvaImage ref={imageRef} image={imageObj} width={stageSize.w} height={stageSize.h} filters={getFilters()} /></Layer>
                   <Layer>
@@ -418,6 +426,11 @@ export default function Editor() {
           <Snackbar show={toast.show} message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />
         </main>
       </div>
+      <SEO
+        title="PixelPoly • Polygon Annotation"
+        description="Advanced polygon annotation tool for semantic segmentation. Support for complex shapes and COCO export."
+        keywords="polygon, segmentation, semantic segmentation, annotation tool"
+      />
     </div>
   );
 }

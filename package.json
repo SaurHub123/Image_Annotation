@@ -13,9 +13,14 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
+    "canvas-confetti": "^1.9.4",
+    "framer-motion": "^12.34.0",
+    "konva": "^10.2.0",
     "lucide-react": "^0.556.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-helmet-async": "^2.0.5",
+    "react-joyride": "^2.9.3",
     "react-konva": "^19.2.1",
     "react-router-dom": "^7.10.1",
     "tailwindcss": "^4.1.18"

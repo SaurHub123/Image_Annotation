@@ -21,6 +21,8 @@ import {
   Settings2
 } from "lucide-react";
 import { loadSkeletons } from "../utils/skeletonStorage";
+import { useTour } from "../context/TourContext";
+import SEO from "./SEO";
 
 /* ================= HELPERS ================= */
 const toAlphabetic = (n) => {
@@ -35,6 +37,12 @@ const toAlphabetic = (n) => {
 };
 
 export default function KeypointAnnotator() {
+  const { startTour } = useTour();
+
+  useEffect(() => {
+    startTour('keypoint');
+  }, [startTour]);
+
   const stageRef = useRef(null);
   const imageRef = useRef(null);
 
@@ -137,7 +145,7 @@ export default function KeypointAnnotator() {
     if (!imageObj || connectMode) return;
     const stage = e.target.getStage();
     if (e.target !== stage && e.target.className !== "Image") return;
-    
+
     const pos = stage.getPointerPosition();
     setKeypoints((prev) => [
       ...prev,
@@ -174,7 +182,7 @@ export default function KeypointAnnotator() {
 
   const handleSave = async () => {
     if (!imageObj || !keypoints.length || !outputDirHandle) return;
-    
+
     const ordered = [...keypoints].sort((a, b) => a.name.localeCompare(b.name));
     const xs = ordered.map(k => k.x);
     const ys = ordered.map(k => k.y);
@@ -196,7 +204,7 @@ export default function KeypointAnnotator() {
       const writable = await fileHandle.createWritable();
       await writable.write(parts.join(" "));
       await writable.close();
-      
+
       setFiles(prev => prev.map(f => f.name === fileName ? { ...f, isAnnotated: true } : f));
       showToast(`Saved ${baseName}.txt`);
     } catch (err) {
@@ -224,7 +232,7 @@ export default function KeypointAnnotator() {
 
   return (
     <div className={`flex flex-col h-screen w-full transition-colors duration-300 ${theme.bg} ${theme.text}`}>
-      
+
       {/* ===== TOP NAVIGATION ACCORDION ===== */}
       <div className={`border-b transition-all duration-300 ${theme.sidebar} ${isImageNavExpanded ? 'py-6' : 'h-16'}`}>
         <div className="flex items-center justify-between px-8 h-full">
@@ -263,8 +271,8 @@ export default function KeypointAnnotator() {
               <ChevronRight size={18} />
             </button>
             <div className="pl-4 border-l border-inherit flex flex-col items-end">
-                <span className="text-[10px] font-bold text-indigo-500">{files.filter(f => f.isAnnotated).length}/{files.length}</span>
-                <span className="text-[8px] uppercase tracking-tighter opacity-40 font-bold">Progress</span>
+              <span className="text-[10px] font-bold text-indigo-500">{files.filter(f => f.isAnnotated).length}/{files.length}</span>
+              <span className="text-[8px] uppercase tracking-tighter opacity-40 font-bold">Progress</span>
             </div>
           </div>
         </div>
@@ -272,12 +280,12 @@ export default function KeypointAnnotator() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* ===== SIDEBAR ===== */}
-        <aside className={`w-80 flex-shrink-0 border-r flex flex-col shadow-xl z-10 ${theme.sidebar}`}>
+        <aside className={`tour-nodes-list w-80 flex-shrink-0 border-r flex flex-col shadow-xl z-10 ${theme.sidebar}`}>
           <div className="p-5 border-b border-inherit flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Crosshair className="w-6 h-6 text-indigo-500" />
               <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
-              <h1 className="font-bold text-xl tracking-tight">PixelPoint</h1>
+                <h1 className="font-bold text-xl tracking-tight">PixelPoint</h1>
               </Link>
             </div>
             <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
@@ -350,7 +358,7 @@ export default function KeypointAnnotator() {
               <p className={theme.subText}>Select folders to start keypoint annotation</p>
             </div>
           ) : (
-            <div className="shadow-2xl rounded-xl overflow-hidden border-4 border-white dark:border-slate-800">
+            <div className="tour-canvas shadow-2xl rounded-xl overflow-hidden border-4 border-white dark:border-slate-800">
               <Stage ref={stageRef} width={stageSize.w} height={stageSize.h} onMouseDown={handleStageClick} style={{ cursor: connectMode ? "alias" : "crosshair" }}>
                 <Layer><KonvaImage ref={imageRef} image={imageObj} width={stageSize.w} height={stageSize.h} filters={getFilters()} /></Layer>
                 <Layer>
@@ -381,6 +389,11 @@ export default function KeypointAnnotator() {
           <Snackbar show={toast.show} message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />
         </main>
       </div>
+      <SEO
+        title="PixelPoint • Keypoint Annotation"
+        description="Precise keypoint annotation tool for pose estimation and feature tracking."
+        keywords="keypoint, pose estimation, landmark detection, annotation tool"
+      />
     </div>
   );
 }
