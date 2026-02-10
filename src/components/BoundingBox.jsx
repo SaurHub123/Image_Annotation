@@ -262,144 +262,144 @@ export default function BoundingBoxAnnotator() {
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="flex flex-1 overflow-hidden">
-          {/* ===== SIDEBAR ===== */}
-          <aside className={`w-80 flex-shrink-0 border-r flex flex-col shadow-xl z-10 ${theme.sidebar}`}>
-            <div className="p-5 border-b border-inherit flex items-center justify-between">
+      <div className="flex flex-1 overflow-hidden">
+        {/* ===== SIDEBAR ===== */}
+        <aside className={`w-80 flex-shrink-0 border-r flex flex-col shadow-xl z-10 ${theme.sidebar}`}>
+          <div className="p-5 border-b border-inherit flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Square className="w-6 h-6 text-indigo-500" />
+              <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
+                <h1 className="font-bold text-xl tracking-tight">PixelBox</h1>
+              </Link>
+            </div>
+            <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
+              {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-indigo-600" />}
+            </button>
+          </div>
+
+          <div className="p-4 space-y-3 border-b border-inherit">
+            <button onClick={handleOpenFolders} className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-all shadow-md">
+              <FolderOpen size={18} /> Open Project Folder
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => setRectangles(r => r.slice(0, -1))} disabled={!rectangles.length} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${theme.buttonSecondary} disabled:opacity-50`}>
+                <Undo size={16} /> Undo
+              </button>
+              <button onClick={handleSave} disabled={!rectangles.length} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${!rectangles.length ? "opacity-50 " + theme.buttonSecondary : "bg-sky-600 text-white shadow-lg"}`}>
+                <Download size={16} /> Save
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <div onClick={() => setIsListExpanded(!isListExpanded)} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-inherit">
               <div className="flex items-center gap-2">
-                <Square className="w-6 h-6 text-indigo-500" />
-                <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
-                  <h1 className="font-bold text-xl tracking-tight">PixelBox</h1>
-                </Link>
+                <Layers size={16} className="text-indigo-500" />
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Boxes ({rectangles.length})</h3>
               </div>
-              <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
-                {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-indigo-600" />}
-              </button>
+              {isListExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </div>
 
-            <div className="p-4 space-y-3 border-b border-inherit">
-              <button onClick={handleOpenFolders} className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-all shadow-md">
-                <FolderOpen size={18} /> Open Project Folder
-              </button>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setRectangles(r => r.slice(0, -1))} disabled={!rectangles.length} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${theme.buttonSecondary} disabled:opacity-50`}>
-                  <Undo size={16} /> Undo
-                </button>
-                <button onClick={handleSave} disabled={!rectangles.length} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${!rectangles.length ? "opacity-50 " + theme.buttonSecondary : "bg-sky-600 text-white shadow-lg"}`}>
-                  <Download size={16} /> Save
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-col flex-1 overflow-hidden">
-              <div onClick={() => setIsListExpanded(!isListExpanded)} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-inherit">
-                <div className="flex items-center gap-2">
-                  <Layers size={16} className="text-indigo-500" />
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Boxes ({rectangles.length})</h3>
-                </div>
-                {isListExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </div>
-
-              {isListExpanded && (
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                  {rectangles.map((r) => (
-                    <div key={r.id} onClick={() => setSelectedId(r.id)} className={`group rounded-lg border p-2.5 cursor-pointer transition-all ${theme.card} ${selectedId === r.id ? 'ring-2 ring-indigo-500 border-indigo-500' : 'hover:border-slate-400'}`}>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
-                        <input
-                          value={r.name}
-                          onChange={(e) => setRectangles(prev => prev.map(item => item.id === r.id ? { ...item, name: e.target.value } : item))}
-                          className="flex-1 text-sm bg-transparent focus:outline-none"
-                        />
-                        <button onClick={(e) => { e.stopPropagation(); setRectangles(rects => rects.filter(x => x.id !== r.id)); }} className="opacity-0 group-hover:opacity-100 p-1 text-red-500">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+            {isListExpanded && (
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {rectangles.map((r) => (
+                  <div key={r.id} onClick={() => setSelectedId(r.id)} className={`group rounded-lg border p-2.5 cursor-pointer transition-all ${theme.card} ${selectedId === r.id ? 'ring-2 ring-indigo-500 border-indigo-500' : 'hover:border-slate-400'}`}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
+                      <input
+                        value={r.name}
+                        onChange={(e) => setRectangles(prev => prev.map(item => item.id === r.id ? { ...item, name: e.target.value } : item))}
+                        className="flex-1 text-sm bg-transparent focus:outline-none"
+                      />
+                      <button onClick={(e) => { e.stopPropagation(); setRectangles(rects => rects.filter(x => x.id !== r.id)); }} className="opacity-0 group-hover:opacity-100 p-1 text-red-500">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 border-t border-inherit">
-              <div className="flex items-center gap-2 mb-2 text-[10px] font-bold uppercase opacity-40"><Palette size={12} /> Filters</div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {["None", "Grayscale", "Invert"].map(f => (
-                  <button key={f} onClick={() => setActiveFilter(f)} className={`text-[10px] py-1.5 rounded font-bold transition-all ${activeFilter === f ? "bg-indigo-600 text-white shadow-md" : theme.buttonSecondary}`}>
-                    {f}
-                  </button>
+                  </div>
                 ))}
               </div>
-            </div>
-          </aside>
-
-          {/* ===== CANVAS AREA ===== */}
-          <main className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto relative">
-            {!imageObj ? (
-              <div onClick={handleOpenFolders} className="flex flex-col items-center justify-center w-full max-w-2xl h-96 border-2 border-dashed rounded-3xl cursor-pointer bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-slate-300 dark:border-slate-700">
-                <div className="p-6 bg-indigo-500/10 rounded-full mb-4 text-indigo-500"><ImagePlus size={48} /></div>
-                <h3 className="text-2xl font-bold mb-1">PixelBox Workspace</h3>
-                <p className={theme.subText}>Open folders to start bounding box annotation</p>
-              </div>
-            ) : (
-              <div className="tour-canvas-area shadow-2xl rounded-xl overflow-hidden border-4 border-white dark:border-slate-800">
-                <Stage
-                  ref={stageRef}
-                  width={stageSize.w}
-                  height={stageSize.h}
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  style={{ cursor: "crosshair" }}
-                >
-                  <Layer>
-                    <KonvaImage ref={imageRef} image={imageObj} width={stageSize.w} height={stageSize.h} filters={getFilters()} />
-                  </Layer>
-                  <Layer>
-                    {rectangles.map((rect) => (
-                      <Group
-                        key={rect.id}
-                        id={rect.id}
-                        x={rect.x}
-                        y={rect.y}
-                        draggable
-                        onClick={() => setSelectedId(rect.id)}
-                        onDragEnd={(e) => setRectangles(prev => prev.map(r => r.id === rect.id ? { ...r, x: e.target.x(), y: e.target.y() } : r))}
-                        onTransformEnd={(e) => {
-                          const node = e.target;
-                          setRectangles(prev => prev.map(r => r.id === rect.id ? {
-                            ...r,
-                            x: node.x(),
-                            y: node.y(),
-                            w: Math.max(5, node.width() * node.scaleX()),
-                            h: Math.max(5, node.height() * node.scaleY()),
-                          } : r));
-                          node.scaleX(1); node.scaleY(1);
-                        }}
-                      >
-                        <Rect width={rect.w} height={rect.h} stroke={rect.color} strokeWidth={2} fill={selectedId === rect.id ? rect.color + '33' : 'transparent'} />
-                        <Label y={-20}>
-                          <Tag fill="#1e293b" pointerDirection="down" />
-                          <Text text={rect.name} fill="white" padding={4} fontSize={11} />
-                        </Label>
-                      </Group>
-                    ))}
-                    {newRect && <Rect x={newRect.x} y={newRect.y} width={newRect.w} height={newRect.h} stroke="#00FF00" strokeWidth={2} />}
-                    <Transformer ref={transformerRef} boundBoxFunc={(oldBox, newBox) => (newBox.width < 5 || newBox.height < 5) ? oldBox : newBox} />
-                  </Layer>
-                </Stage>
-              </div>
             )}
-            <Snackbar show={toast.show} message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />
-          </main>
-        </div>
-        <SEO
-          title="PixelBox • Bounding Box Annotation"
-          description="Efficient bounding box annotation tool for object detection datasets. Fast, accurate, and export-ready."
-          keywords="bounding box, object detection, labeling, yolo, annotation tool"
-        />
+          </div>
+
+          <div className="p-4 border-t border-inherit">
+            <div className="flex items-center gap-2 mb-2 text-[10px] font-bold uppercase opacity-40"><Palette size={12} /> Filters</div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {["None", "Grayscale", "Invert"].map(f => (
+                <button key={f} onClick={() => setActiveFilter(f)} className={`text-[10px] py-1.5 rounded font-bold transition-all ${activeFilter === f ? "bg-indigo-600 text-white shadow-md" : theme.buttonSecondary}`}>
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        {/* ===== CANVAS AREA ===== */}
+        <main className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto relative">
+          {!imageObj ? (
+            <div onClick={handleOpenFolders} className="flex flex-col items-center justify-center w-full max-w-2xl h-96 border-2 border-dashed rounded-3xl cursor-pointer bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-slate-300 dark:border-slate-700">
+              <div className="p-6 bg-indigo-500/10 rounded-full mb-4 text-indigo-500"><ImagePlus size={48} /></div>
+              <h3 className="text-2xl font-bold mb-1">PixelBox Workspace</h3>
+              <p className={theme.subText}>Open folders to start bounding box annotation</p>
+            </div>
+          ) : (
+            <div className="tour-canvas-area shadow-2xl rounded-xl overflow-hidden border-4 border-white dark:border-slate-800">
+              <Stage
+                ref={stageRef}
+                width={stageSize.w}
+                height={stageSize.h}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                style={{ cursor: "crosshair" }}
+              >
+                <Layer>
+                  <KonvaImage ref={imageRef} image={imageObj} width={stageSize.w} height={stageSize.h} filters={getFilters()} />
+                </Layer>
+                <Layer>
+                  {rectangles.map((rect) => (
+                    <Group
+                      key={rect.id}
+                      id={rect.id}
+                      x={rect.x}
+                      y={rect.y}
+                      draggable
+                      onClick={() => setSelectedId(rect.id)}
+                      onDragEnd={(e) => setRectangles(prev => prev.map(r => r.id === rect.id ? { ...r, x: e.target.x(), y: e.target.y() } : r))}
+                      onTransformEnd={(e) => {
+                        const node = e.target;
+                        setRectangles(prev => prev.map(r => r.id === rect.id ? {
+                          ...r,
+                          x: node.x(),
+                          y: node.y(),
+                          w: Math.max(5, node.width() * node.scaleX()),
+                          h: Math.max(5, node.height() * node.scaleY()),
+                        } : r));
+                        node.scaleX(1); node.scaleY(1);
+                      }}
+                    >
+                      <Rect width={rect.w} height={rect.h} stroke={rect.color} strokeWidth={2} fill={selectedId === rect.id ? rect.color + '33' : 'transparent'} />
+                      <Label y={-20}>
+                        <Tag fill="#1e293b" pointerDirection="down" />
+                        <Text text={rect.name} fill="white" padding={4} fontSize={11} />
+                      </Label>
+                    </Group>
+                  ))}
+                  {newRect && <Rect x={newRect.x} y={newRect.y} width={newRect.w} height={newRect.h} stroke="#00FF00" strokeWidth={2} />}
+                  <Transformer ref={transformerRef} boundBoxFunc={(oldBox, newBox) => (newBox.width < 5 || newBox.height < 5) ? oldBox : newBox} />
+                </Layer>
+              </Stage>
+            </div>
+          )}
+          <Snackbar show={toast.show} message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />
+        </main>
       </div>
-      </div>
-      );
+      <SEO
+        title="PixelBox • Bounding Box Annotation"
+        description="Efficient bounding box annotation tool for object detection datasets. Fast, accurate, and export-ready."
+        keywords="bounding box, object detection, labeling, yolo, annotation tool"
+      />
+    </div>
+  );
 }
