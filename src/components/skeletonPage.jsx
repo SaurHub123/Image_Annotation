@@ -11,6 +11,7 @@ import {
   Sun,
   Moon,
   Plus,
+  ChevronLeft,
   ChevronRight,
   Image as ImageIcon,
   X
@@ -38,11 +39,15 @@ export default function SkeletonEditor() {
   const [connectMode, setConnectMode] = useState(false);
   const [source, setSource] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showAuthorModal, setShowAuthorModal] = useState(false);
+  const [authorInput, setAuthorInput] = useState("");
+  const [descriptionInput, setDescriptionInput] = useState("");
 
   // New States for Reference Image
   const [bgImage, setBgImage] = useState(null);
   const [imageOpacity, setImageOpacity] = useState(0.5);
   const fileInputRef = useRef(null);
+  const importSkeletonInputRef = useRef(null);
 
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
@@ -51,6 +56,73 @@ export default function SkeletonEditor() {
     setToast({ show: true, message, type });
   };
 
+  /* ===== EXPORT/IMPORT SKELETON ===== */
+  const exportSkeleton = () => {
+    if (!name || keypoints.length === 0) {
+      showToast("Please save a skeleton first before exporting", "error");
+      return;
+    }
+
+    const skeleton = skeletons.find(s => s.id === activeId);
+    const skeletonData = {
+      id: activeId || crypto.randomUUID(),
+      name,
+      keypoints,
+      connections,
+      author: skeleton?.author || authorInput || "Unknown",
+      description: skeleton?.description || descriptionInput || "",
+      exportedAt: new Date().toISOString(),
+    };
+
+    const dataStr = JSON.stringify(skeletonData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${name.replace(/\s+/g, "_")}_skeleton.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`Skeleton "${name}" exported successfully!`, "success");
+  };
+
+  const handleImportSkeleton = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedSkeleton = JSON.parse(event.target.result);
+
+        if (!importedSkeleton.name || !importedSkeleton.keypoints || !importedSkeleton.connections) {
+          showToast("Invalid skeleton file format", "error");
+          return;
+        }
+
+        const newSkeleton = {
+          id: crypto.randomUUID(),
+          name: importedSkeleton.name,
+          keypoints: importedSkeleton.keypoints,
+          connections: importedSkeleton.connections,
+        };
+
+        const updated = [...skeletons, newSkeleton];
+        saveSkeletons(updated);
+        setSkeletons(updated);
+        showToast(`Skeleton "${newSkeleton.name}" imported successfully!`, "success");
+        loadSkeleton(newSkeleton);
+      } catch (error) {
+        showToast("Error parsing skeleton file", "error");
+        console.error("Import error:", error);
+      }
+    };
+
+    reader.readAsText(file);
+    // Reset the input so the same file can be imported again
+    e.target.value = "";
+  };
 
   /* ===== LOAD STORAGE ===== */
   useEffect(() => {
@@ -119,14 +191,29 @@ export default function SkeletonEditor() {
   /* ===== SAVE ===== */
   const saveSkeleton = () => {
     if (!name) return alert("Please enter a name");
+    setAuthorInput("");
+    setDescriptionInput("");
+    setShowAuthorModal(true);
+  };
+
+  const handleAuthorModalConfirm = () => {
+    if (!authorInput.trim()) {
+      showToast("Please enter author name", "error");
+      return;
+    }
+
     const updated = [...skeletons.filter(s => s.id !== activeId), {
       id: activeId || crypto.randomUUID(),
       name,
       keypoints,
       connections,
+      author: authorInput,
+      description: descriptionInput,
+      exportedAt: new Date().toISOString(),
     }];
     saveSkeletons(updated);
     setSkeletons(updated);
+    setShowAuthorModal(false);
     showToast("Skeleton saved successfully!", "success");
   };
 
@@ -184,10 +271,22 @@ export default function SkeletonEditor() {
         onChange={handleImageUpload}
       />
 
+      {/* Hidden Skeleton Import Input */}
+      <input
+        type="file"
+        ref={importSkeletonInputRef}
+        className="hidden"
+        accept="application/json"
+        onChange={handleImportSkeleton}
+      />
+
       {/* ===== LEFT SIDEBAR ===== */}
       <aside className={`w-80 flex-shrink-0 border-r flex flex-col shadow-xl z-10 transition-colors duration-300 ${theme.sidebar}`}>
         <div className="p-5 border-b border-inherit flex items-center justify-between">
           <div className="flex items-center gap-2">
+              <Link to="/" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <ChevronLeft className="w-5 h-5 text-indigo-500" />
+              </Link>
             <Bone className="w-6 h-6 text-indigo-500" />
             <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
               <h1 className="font-bold text-xl tracking-tight">PixelSkeleton</h1>
@@ -246,6 +345,30 @@ export default function SkeletonEditor() {
           <button onClick={handleNew} className={`w-full flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded hover:bg-opacity-80 transition-all ${theme.subText} border border-dashed border-slate-400`}>
             <Plus size={12} /> New Project
           </button>
+
+          {/* Export/Import Section */}
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <button
+              onClick={exportSkeleton}
+              className="flex items-center justify-center gap-1.5 py-2 px-2 text-xs font-medium rounded-lg transition-all bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
+              title="Download skeleton as JSON"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Export
+            </button>
+            <button
+              onClick={() => importSkeletonInputRef.current.click()}
+              className="flex items-center justify-center gap-1.5 py-2 px-2 text-xs font-medium rounded-lg transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+              title="Upload skeleton from JSON"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Import
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-3 custom-scrollbar min-h-0 border-b border-inherit">
@@ -348,6 +471,50 @@ export default function SkeletonEditor() {
             type={toast.type}
             onClose={() => setToast({ ...toast, show: false })}
           />
+
+          {/* Author & Description Modal */}
+          {showAuthorModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className={`rounded-lg p-8 w-96 shadow-2xl ${theme.sidebar}`}>
+                <h2 className="text-xl font-bold mb-4">Skeleton Details</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Author Name</label>
+                    <input
+                      type="text"
+                      value={authorInput}
+                      onChange={(e) => setAuthorInput(e.target.value)}
+                      placeholder="Your name"
+                      className={`w-full px-4 py-2 rounded border ${theme.input} focus:ring-2 focus:ring-indigo-500 outline-none`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Description (optional)</label>
+                    <textarea
+                      value={descriptionInput}
+                      onChange={(e) => setDescriptionInput(e.target.value)}
+                      placeholder="Describe this skeleton..."
+                      className={`w-full px-4 py-2 rounded border ${theme.input} focus:ring-2 focus:ring-indigo-500 outline-none resize-none h-24`}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => setShowAuthorModal(false)}
+                    className="flex-1 px-4 py-2 rounded-lg font-medium bg-slate-500 hover:bg-slate-600 text-white transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAuthorModalConfirm}
+                    className="flex-1 px-4 py-2 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-all"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Clear Image Overlay Button */}
           {bgImage && (

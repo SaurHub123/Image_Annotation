@@ -1,0 +1,89 @@
+{
+  "id": "f76c6cc9-9320-46dd-90f1-1009b6b5cdc7",
+  "name": "Buffalo",
+  "keypoints": [
+    {
+      "id": "af081959-8615-4a79-bb3d-07bcf41404af",
+      "name": "KP 1",
+      "x": 0.8766666666666667,
+      "y": 0.30416666666666664
+    },
+    {
+      "id": "5ce27877-639a-441d-be83-889f8bbea0ac",
+      "name": "KP 2",
+      "x": 0.7566666666666667,
+      "y": 0.2275
+    },
+    {
+      "id": "860677da-c6ca-4cc9-bbe4-12a7ac42a65e",
+      "name": "KP 3",
+      "x": 0.7233333333333334,
+      "y": 0.28583333333333333
+    },
+    {
+      "id": "720ab55e-a303-4770-9022-85081143dbe8",
+      "name": "KP 4",
+      "x": 0.3983333333333333,
+      "y": 0.2525
+    },
+    {
+      "id": "33844d3d-972d-4b17-9ea8-cf74e6021467",
+      "name": "KP 5",
+      "x": 0.4066666666666667,
+      "y": 0.8908333333333334
+    },
+    {
+      "id": "daa8ffdb-5fce-475d-b0c7-5259eaadab9b",
+      "name": "KP 6",
+      "x": 0.345,
+      "y": 0.4725
+    },
+    {
+      "id": "84d3f6a7-52a8-4a3c-bf48-79fb8a6d3af3",
+      "name": "KP 7",
+      "x": 0.575,
+      "y": 0.2608333333333333
+    },
+    {
+      "id": "2f71addb-7a5f-40da-b721-e2bb211b1efc",
+      "name": "KP 8",
+      "x": 0.585,
+      "y": 0.6108333333333333
+    },
+    {
+      "id": "b6a3d990-ea68-4ef6-9d61-5f9eb8549d9d",
+      "name": "KP 9",
+      "x": 0.7666666666666667,
+      "y": 0.8975
+    }
+  ],
+  "connections": [
+    {
+      "from": "5ce27877-639a-441d-be83-889f8bbea0ac",
+      "to": "b6a3d990-ea68-4ef6-9d61-5f9eb8549d9d"
+    },
+    {
+      "from": "af081959-8615-4a79-bb3d-07bcf41404af",
+      "to": "5ce27877-639a-441d-be83-889f8bbea0ac"
+    },
+    {
+      "from": "af081959-8615-4a79-bb3d-07bcf41404af",
+      "to": "860677da-c6ca-4cc9-bbe4-12a7ac42a65e"
+    },
+    {
+      "from": "daa8ffdb-5fce-475d-b0c7-5259eaadab9b",
+      "to": "af081959-8615-4a79-bb3d-07bcf41404af"
+    },
+    {
+      "from": "720ab55e-a303-4770-9022-85081143dbe8",
+      "to": "33844d3d-972d-4b17-9ea8-cf74e6021467"
+    },
+    {
+      "from": "2f71addb-7a5f-40da-b721-e2bb211b1efc",
+      "to": "84d3f6a7-52a8-4a3c-bf48-79fb8a6d3af3"
+    }
+  ],
+  "author": "Saurabh",
+  "description": "This is Buffalo Skeleton. You can use it for annotating the Buffalo. This skeleton is CIRB Hisar. ",
+  "exportedAt": "2026-02-18T11:49:27.462Z"
+}

@@ -7,6 +7,7 @@ import {
   Crosshair,
   Bone,
   Eye,
+  Store,
   Layers,
   ArrowRight,
   CheckCircle2,
@@ -19,6 +20,7 @@ import Editor from "./components/Editor";
 import AnnotationViewer from "./components/Viewer";
 import KeypointAnnotator from "./components/KeyPoint";
 import SkeletonEditor from "./components/skeletonPage";
+import SkeletonStore from "./components/SkeletonStore";
 import KeypointVisualizer from "./components/keyValidator";
 import BoundingBoxAnnotator from "./components/BoundingBox";
 import DownloadPage from "./components/Download";
@@ -95,7 +97,7 @@ const HomeContent = ({ tools }) => {
   return (
     <>
       {/* Navigation */}
-      <nav className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
+      {/* <nav className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 tour-nav-logo">
             <Layers className="w-6 h-6 text-indigo-600" />
@@ -106,6 +108,36 @@ const HomeContent = ({ tools }) => {
               <Download size={16} /> Download
             </Link>
           </div>
+          <div className="flex items-center gap-6 text-sm font-medium text-slate-500">
+            <Link to="/store" className="hover:text-indigo-600 transition-colors flex items-center gap-1 font-semibold text-indigo-600 tour-download-link">
+              <Store size={16} /> Store
+            </Link>
+          </div>
+        </div>
+      </nav> */}
+
+      <nav className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          
+          {/* 1. Logo Group */}
+          <div className="flex items-center gap-2 tour-nav-logo">
+            <Layers className="w-6 h-6 text-indigo-600" />
+            <span className="font-bold text-xl tracking-tight text-slate-900">
+              Pixel<span className="text-indigo-600">Suite</span>
+            </span>
+          </div>
+
+          {/* 2. Navigation Links Group (Consolidated) */}
+          <div className="flex items-center gap-6 text-sm font-medium">
+            <Link to="/download" className="text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1 font-semibold tour-download-link">
+              <Download size={16} /> Download
+            </Link>
+            
+            <Link to="/store" target="_blank" className="text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1 font-semibold">
+              <Store size={16} /> Store
+            </Link>
+          </div>
+
         </div>
       </nav>
 
@@ -327,6 +359,7 @@ export default function App() {
             </MobileRestriction>
           }
         />
+        <Route path="/store" element={<SkeletonStore />} />
         <Route
           path="/bbox"
           element={

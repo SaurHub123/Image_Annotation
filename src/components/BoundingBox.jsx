@@ -269,6 +269,9 @@ export default function BoundingBoxAnnotator() {
         <aside className={`w-80 flex-shrink-0 border-r flex flex-col shadow-xl z-10 ${theme.sidebar}`}>
           <div className="p-5 border-b border-inherit flex items-center justify-between">
             <div className="flex items-center gap-2">
+              <Link to="/" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <ChevronLeft className="w-5 h-5 text-indigo-500" />
+              </Link>             
               <Square className="w-6 h-6 text-indigo-500" />
               <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
                 <h1 className="font-bold text-xl tracking-tight">PixelBox</h1>
