@@ -90,8 +90,12 @@ const HomeContent = ({ tools }) => {
   const { startTour } = useTour();
 
   useEffect(() => {
-    // Start home tour on mount
-    startTour('home');
+    // Start home tour on mount only for first-time users
+    const tourCompleted = localStorage.getItem('tourCompleted_home');
+    if (!tourCompleted) {
+      startTour('home');
+      localStorage.setItem('tourCompleted_home', 'true');
+    }
   }, [startTour]);
 
   return (
@@ -133,7 +137,7 @@ const HomeContent = ({ tools }) => {
               <Download size={16} /> Download
             </Link>
             
-            <Link to="/store" target="_blank" className="text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1 font-semibold">
+            <Link to="/store" className="text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1 font-semibold">
               <Store size={16} /> Store
             </Link>
           </div>

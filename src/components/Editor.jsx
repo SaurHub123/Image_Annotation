@@ -61,7 +61,11 @@ export default function Editor() {
   const { startTour } = useTour();
 
   useEffect(() => {
-    startTour('editor');
+    const tourCompleted = localStorage.getItem('tourCompleted_editor');
+    if (!tourCompleted) {
+      startTour('editor');
+      localStorage.setItem('tourCompleted_editor', 'true');
+    }
   }, [startTour]);
 
   // Annotation State

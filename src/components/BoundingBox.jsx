@@ -50,9 +50,19 @@ export default function BoundingBoxAnnotator() {
   const [newRect, setNewRect] = useState(null);
   const [activeFilter, setActiveFilter] = useState("None");
 
+  const { startTour } = useTour();
+
   useEffect(() => {
     document.title = "PixelBox • Bounding Box Annotator";
   }, []);
+
+  useEffect(() => {
+    const tourCompleted = localStorage.getItem('tourCompleted_bbox');
+    if (!tourCompleted) {
+      startTour('bbox');
+      localStorage.setItem('tourCompleted_bbox', 'true');
+    }
+  }, [startTour]);
 
   useEffect(() => {
     if (imageObj && imageRef.current) {
