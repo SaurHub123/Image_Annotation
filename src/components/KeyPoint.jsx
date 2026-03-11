@@ -82,7 +82,7 @@ export default function KeypointAnnotator() {
   const [className, setClassName] = useState("");
 
   useEffect(() => {
-    document.title = "PixelPoint • Keypoint Annotator";
+    document.title = "AnnoPoint • Keypoint Annotator";
     setSkeletons(loadSkeletons());
   }, []);
 
@@ -429,7 +429,7 @@ kpt_shape: [${keypointCount}, 3]`;
               </Link>
               <Crosshair className="w-6 h-6 text-indigo-500" />
               <span className="text-sm font-medium text-slate-500">
-                <h1 className="font-bold text-xl tracking-tight">PixelPoint</h1>
+                <h1 className="font-bold text-xl tracking-tight">AnnoPoint</h1>
               </span>
             </div>
             <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
@@ -583,7 +583,7 @@ kpt_shape: [${keypointCount}, 3]`;
           {!imageObj ? (
             <div onClick={handleOpenFolders} className="flex flex-col items-center justify-center w-full max-w-2xl h-96 border-2 border-dashed rounded-3xl cursor-pointer bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-slate-300 dark:border-slate-700">
               <div className="p-6 bg-indigo-500/10 rounded-full mb-4 text-indigo-500"><ImagePlus size={48} /></div>
-              <h3 className="text-2xl font-bold mb-1">PixelPoint Workspace</h3>
+              <h3 className="text-2xl font-bold mb-1">AnnoPoint Workspace</h3>
               <p className={theme.subText}>Select folders to start keypoint annotation</p>
             </div>
           ) : (
@@ -664,7 +664,7 @@ kpt_shape: [${keypointCount}, 3]`;
         </main>
       </div>
       <SEO
-        title="PixelPoint • Keypoint Annotation"
+        title="AnnoPoint • Keypoint Annotation"
         description="Precise keypoint annotation tool for pose estimation and feature tracking."
         keywords="keypoint, pose estimation, landmark detection, annotation tool"
       />

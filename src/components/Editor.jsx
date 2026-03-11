@@ -81,7 +81,7 @@ export default function Editor() {
   const isDrawing = currentPoints.length > 0;
 
   useEffect(() => {
-    document.title = "PixelPoly • Folder Annotator";
+    document.title = "AnnoPoly • Folder Annotator";
   }, []);
 
   useEffect(() => {
@@ -318,7 +318,7 @@ export default function Editor() {
               </Link>             
               <Pentagon className="w-6 h-6 text-indigo-500" />
               <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
-                <h1 className="font-bold text-xl tracking-tight">PixelPoly</h1>
+                <h1 className="font-bold text-xl tracking-tight">AnnoPoly</h1>
               </Link>
             </div>
             <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
@@ -392,7 +392,7 @@ export default function Editor() {
           {!imageObj ? (
             <div onClick={handleOpenFolders} className="flex flex-col items-center justify-center w-full max-w-2xl h-96 border-2 border-dashed rounded-3xl cursor-pointer bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-slate-300 dark:border-slate-700">
               <div className="p-6 bg-indigo-500/10 rounded-full mb-4 text-indigo-500"><ImagePlus size={48} /></div>
-              <h3 className="text-2xl font-bold mb-1">PixelPoly Workspace</h3>
+              <h3 className="text-2xl font-bold mb-1">AnnoPoly Workspace</h3>
               <p className={theme.subText}>Select folders to start your project</p>
             </div>
           ) : (
@@ -434,7 +434,7 @@ export default function Editor() {
         </main>
       </div>
       <SEO
-        title="PixelPoly • Polygon Annotation"
+        title="AnnoPoly • Polygon Annotation"
         description="Advanced polygon annotation tool for semantic segmentation. Support for complex shapes and COCO export."
         keywords="polygon, segmentation, semantic segmentation, annotation tool"
       />

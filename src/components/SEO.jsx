@@ -5,7 +5,7 @@ const SEO = ({ title, description, keywords, name, type, image, url }) => {
     return (
         <Helmet>
             {/* Standard metadata tags */}
-            <title>{title ? `${title} | PixelSuite` : 'PixelSuite • AI Annotation Tools'}</title>
+            <title>{title ? `${title} | AnnoForge` : 'AnnoForge • AI Annotation Tools'}</title>
             <meta name='description' content={description} />
             <meta name='keywords' content={keywords} />
 
@@ -33,10 +33,10 @@ const SEO = ({ title, description, keywords, name, type, image, url }) => {
 }
 
 SEO.defaultProps = {
-    title: 'PixelSuite',
+    title: 'AnnoForge',
     description: 'A unified platform for all your image annotation needs. Label polygons, bounding boxes, and keypoints with pixel-perfect precision.',
     keywords: 'annotation, computer vision, ai, machine learning, polygon, bounding box, keypoint, skeleton, coco format',
-    name: 'PixelSuite',
+    name: 'AnnoForge',
     type: 'website',
     image: '/og-image.png', // Ensure you have a default OG image in public folder or remove/replace
     url: ''

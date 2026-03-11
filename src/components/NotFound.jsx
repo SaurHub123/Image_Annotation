@@ -15,7 +15,7 @@ const NotFound = () => {
             </div>
 
             <h2 className="text-3xl font-bold text-slate-900 mb-4">
-                Lost in the Pixel Space?
+                Lost in the Anno Space?
             </h2>
 
             <p className="text-slate-600 max-w-md mx-auto mb-10 leading-relaxed text-lg">

@@ -53,7 +53,7 @@ export default function BoundingBoxAnnotator() {
   const { startTour } = useTour();
 
   useEffect(() => {
-    document.title = "PixelBox • Bounding Box Annotator";
+    document.title = "AnnoBox • Bounding Box Annotator";
   }, []);
 
   useEffect(() => {
@@ -284,7 +284,7 @@ export default function BoundingBoxAnnotator() {
               </Link>             
               <Square className="w-6 h-6 text-indigo-500" />
               <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
-                <h1 className="font-bold text-xl tracking-tight">PixelBox</h1>
+                <h1 className="font-bold text-xl tracking-tight">AnnoBox</h1>
               </Link>
             </div>
             <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
@@ -353,7 +353,7 @@ export default function BoundingBoxAnnotator() {
           {!imageObj ? (
             <div onClick={handleOpenFolders} className="flex flex-col items-center justify-center w-full max-w-2xl h-96 border-2 border-dashed rounded-3xl cursor-pointer bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-slate-300 dark:border-slate-700">
               <div className="p-6 bg-indigo-500/10 rounded-full mb-4 text-indigo-500"><ImagePlus size={48} /></div>
-              <h3 className="text-2xl font-bold mb-1">PixelBox Workspace</h3>
+              <h3 className="text-2xl font-bold mb-1">AnnoBox Workspace</h3>
               <p className={theme.subText}>Open folders to start bounding box annotation</p>
             </div>
           ) : (
@@ -409,7 +409,7 @@ export default function BoundingBoxAnnotator() {
         </main>
       </div>
       <SEO
-        title="PixelBox • Bounding Box Annotation"
+        title="AnnoBox • Bounding Box Annotation"
         description="Efficient bounding box annotation tool for object detection datasets. Fast, accurate, and export-ready."
         keywords="bounding box, object detection, labeling, yolo, annotation tool"
       />

@@ -289,7 +289,7 @@ export default function SkeletonEditor() {
               </Link>
             <Bone className="w-6 h-6 text-indigo-500" />
             <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
-              <h1 className="font-bold text-xl tracking-tight">PixelSkeleton</h1>
+              <h1 className="font-bold text-xl tracking-tight">AnnoSkeleton</h1>
             </Link>
           </div>
           <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-2 rounded-full transition-all ${isDarkMode ? 'bg-slate-700 hover:bg-slate-600' : 'bg-slate-100 hover:bg-slate-200'}`}>
@@ -556,7 +556,7 @@ export default function SkeletonEditor() {
         </div>
       </aside>
       <SEO
-        title="PixelSkeleton • Skeleton Creator"
+        title="AnnoSkeleton • Skeleton Creator"
         description="Design custom skeleton structures for keypoint annotation tasks. visual editor for node and edge definitions."
         keywords="skeleton, graph, nodes, edges, structure definition"
       />

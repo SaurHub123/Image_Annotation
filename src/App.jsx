@@ -33,7 +33,7 @@ import SEO from "./components/SEO";
 
 function Home() {
   useEffect(() => {
-    document.title = "Pixel Suite • Annotation Tools";
+    document.title = "AnnoForge • Annotation Tools";
   }, []);
 
 
@@ -41,7 +41,7 @@ function Home() {
   const tools = [
     {
       id: "poly",
-      name: "PixelPoly",
+      name: "AnnoPoly",
       path: "/editor",
       icon: <PenTool className="w-6 h-6" />,
       color: "bg-blue-500",
@@ -50,7 +50,7 @@ function Home() {
     },
     {
       id: "bbox",
-      name: "PixelBox",
+      name: "AnnoBox",
       path: "/bbox",
       icon: <BoxSelect className="w-6 h-6" />,
       color: "bg-emerald-500",
@@ -59,7 +59,7 @@ function Home() {
     },
     {
       id: "keypoint",
-      name: "PixelPoint",
+      name: "AnnoPoint",
       path: "/keypoints",
       icon: <Crosshair className="w-6 h-6" />,
       color: "bg-indigo-500",
@@ -68,7 +68,7 @@ function Home() {
     },
     {
       id: "skeleton",
-      name: "PixelSkeleton",
+      name: "AnnoSkeleton",
       path: "/skeletons",
       icon: <Bone className="w-6 h-6" />,
       color: "bg-amber-500",
@@ -105,7 +105,7 @@ const HomeContent = ({ tools }) => {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 tour-nav-logo">
             <Layers className="w-6 h-6 text-indigo-600" />
-            <span className="font-bold text-xl tracking-tight text-slate-900">Pixel<span className="text-indigo-600">Suite</span></span>
+            <span className="font-bold text-xl tracking-tight text-slate-900">Anno<span className="text-indigo-600">Forge</span></span>
           </div>
           <div className="flex items-center gap-6 text-sm font-medium text-slate-500">
             <Link to="/download" className="hover:text-indigo-600 transition-colors flex items-center gap-1 font-semibold text-indigo-600 tour-download-link">
@@ -127,7 +127,7 @@ const HomeContent = ({ tools }) => {
           <div className="flex items-center gap-2 tour-nav-logo">
             <Layers className="w-6 h-6 text-indigo-600" />
             <span className="font-bold text-xl tracking-tight text-slate-900">
-              Pixel<span className="text-indigo-600">Suite</span>
+              Anno<span className="text-indigo-600">Forge</span>
             </span>
           </div>
 
@@ -146,7 +146,7 @@ const HomeContent = ({ tools }) => {
       </nav>
 
       <SEO
-        title="PixelSuite • AI Annotation Tools"
+        title="AnnoForge • AI Annotation Tools"
         description="A unified platform for image annotation. Label polygons, bounding boxes, keypoints, and skeletons with precision."
         keywords="annotation, AI, computer vision, polygon, bounding box, keypoint, skeleton"
       />
@@ -165,7 +165,7 @@ const HomeContent = ({ tools }) => {
               Computer Vision Data
             </span>
           </h1>
-          <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
             A unified platform for all your image annotation needs.
             Label polygons, bounding boxes, and keypoints with pixel-perfect precision.
             Export to COCO format instantly.
@@ -213,7 +213,7 @@ const HomeContent = ({ tools }) => {
       <section className="bg-white border-y border-slate-100 py-24">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Why Researchers Choose Pixel<span className="text-indigo-600">Suite</span></h2>
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Why Researchers Choose Anno<span className="text-indigo-600">Forge</span></h2>
             <p className="text-slate-500 max-w-2xl mx-auto">Built by developers for developers. We focus on speed, accuracy, and standardization.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-12">
@@ -254,7 +254,7 @@ const HomeContent = ({ tools }) => {
               <WifiOff size={14} />
               <span>Offline Support</span>
             </div>
-            <h2 className="text-4xl font-bold mb-4 leading-tight">Take Pixel Offline</h2>
+            <h2 className="text-4xl font-bold mb-4 leading-tight">Take AnnoForge Offline</h2>
             <p className="text-indigo-200 text-lg mb-8 leading-relaxed">
               Download the desktop application for Windows, macOS, and Linux.
               Annotate significantly larger datasets with native performance and complete privacy.
@@ -276,7 +276,7 @@ const HomeContent = ({ tools }) => {
                   <div className="w-3 h-3 rounded-full bg-amber-500" />
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
                 </div>
-                <div className="text-xs text-slate-400 font-mono ml-4">Pixel Desktop</div>
+                <div className="text-xs text-slate-400 font-mono ml-4">Anno Desktop</div>
               </div>
               <div className="space-y-3">
                 <div className="h-32 bg-slate-900/50 rounded-lg border border-slate-700/50 flex items-center justify-center">
@@ -297,7 +297,7 @@ const HomeContent = ({ tools }) => {
       <footer className="bg-slate-50 border-t border-slate-200 py-12 text-center text-slate-500 text-sm">
         <div className="flex items-center justify-center gap-2 mb-4 opacity-50">
           <Layers size={18} />
-          <span className="font-bold">Pixel Suite</span>
+          <span className="font-bold">AnnoForge</span>
         </div>
         <p>© 2026 CSIR-CSIO, Chandigarh.</p>
         {/* <button
