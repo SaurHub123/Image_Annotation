@@ -66,27 +66,57 @@ The suite consists of four specialized tools, simplified into a single modern ap
 
 ---
 
-## 📦 Installation & Setup
+## Installation & Setup
 
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/SaurHub123/Image_Annotation.git
-    cd Image_Annotation
-    ```
+# Tauri + Vite Project Commands
 
-2.  **Install Dependencies**
-    ```bash
-    npm install
-    ```
+## 1. Install Dependencies
 
-3.  **Run Development Server**
-    ```bash
-    npm run dev
-    ```
+```bash
+npm install
+````
 
-4.  **Open in Browser**
-    Visit `http://localhost:5173` to start annotating!
+## 2. Install Tauri CLI
 
+```bash
+npm install --save-dev @tauri-apps/cli
+```
+
+## 3. Run Desktop App (Development)
+
+```bash
+npx tauri dev
+```
+
+## 4. Build Frontend
+
+```bash
+npm run build
+```
+
+## 5. Build Desktop Application (.exe / .app / .deb)
+
+```bash
+npx tauri build
+```
+
+## 6. Run Frontend Only (Browser)
+
+```bash
+npm run dev
+```
+
+## 7. Preview Production Build
+
+```bash
+npm run preview
+```
+
+## Built Desktop App Location
+
+```
+src-tauri/target/release/bundle/
+```
 ---
 
 ## 🤝 Contributing
