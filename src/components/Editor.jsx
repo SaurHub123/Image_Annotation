@@ -435,7 +435,7 @@ export default function Editor() {
       </div>
       <SEO
         title="AnnoPoly • Polygon Annotation"
-        description="Advanced polygon annotation tool for semantic segmentation. Support for complex shapes and COCO export."
+        description="Advanced polygon annotation tool for semantic segmentation. Support for complex shapes and YOLO export."
         keywords="polygon, segmentation, semantic segmentation, annotation tool"
       />
     </div>

@@ -168,7 +168,7 @@ const HomeContent = ({ tools }) => {
             <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
             A unified platform for all your image annotation needs.
             Label polygons, bounding boxes, and keypoints with pixel-perfect precision.
-            Export to COCO format instantly.
+            Export to YOLO format instantly.
           </p>
           <div className="flex items-center justify-center gap-4">
             <a
@@ -220,7 +220,7 @@ const HomeContent = ({ tools }) => {
             {[
               {
                 title: "Standardized Exports",
-                desc: "All tools export to the industry-standard COCO JSON format, ready for direct integration with PyTorch, TensorFlow, and YOLO."
+                desc: "All tools export to the industry-standard YOLO format, ready for direct integration with PyTorch, TensorFlow, and YOLO."
               },
               {
                 title: "Local Privacy",

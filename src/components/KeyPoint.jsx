@@ -297,7 +297,7 @@ kpt_shape: [${keypointCount}, 3]`;
       // 1. Sort keypoints alphabetically to ensure consistent index mapping
       const ordered = [...keypoints].sort((a, b) => a.name.localeCompare(b.name));
       
-      // 2. Calculate Bounding Box for the YOLO/COCO format header
+      // 2. Calculate Bounding Box for the YOLO format header
       const xs = ordered.map(k => k.x);
       const ys = ordered.map(k => k.y);
 

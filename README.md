@@ -48,7 +48,7 @@ The suite consists of four specialized tools, simplified into a single modern ap
 
 ## 🌟 Visual & Usability Highlights
 
-*   **COCO Export**: One-click export to the industry-standard COCO JSON format.
+*   **YOLO Export**: One-click export to the industry-standard YOLO format.
 *   **Dark Mode**: Fully supported dark/light themes for eye comfort.
 *   **Offline Capable**: Work mostly on the client-side; no heavy server dependencies.
 *   **Validation Viewer**: Built-in viewer to inspect and verify your JSON annotations.

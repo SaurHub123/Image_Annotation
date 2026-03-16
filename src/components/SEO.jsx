@@ -35,7 +35,7 @@ const SEO = ({ title, description, keywords, name, type, image, url }) => {
 SEO.defaultProps = {
     title: 'AnnoForge',
     description: 'A unified platform for all your image annotation needs. Label polygons, bounding boxes, and keypoints with pixel-perfect precision.',
-    keywords: 'annotation, computer vision, ai, machine learning, polygon, bounding box, keypoint, skeleton, coco format',
+    keywords: 'annotation, computer vision, ai, machine learning, polygon, bounding box, keypoint, skeleton, yolo format',
     name: 'AnnoForge',
     type: 'website',
     image: '/og-image.png', // Ensure you have a default OG image in public folder or remove/replace
