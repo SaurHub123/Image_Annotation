@@ -19,7 +19,7 @@ export default function DownloadPage() {
             size: "8.3 MB",
             color: "bg-blue-600",
             hover: "hover:bg-blue-700",
-            link: "/annoforge.exe",
+            link: "/poseforge.exe",
             button: "Download",
             available: true
         },
@@ -55,7 +55,7 @@ export default function DownloadPage() {
             <nav className="border-b bg-white sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                     <Link to="/" className="font-bold text-xl tracking-tight text-slate-900 flex items-center gap-2">
-                        Anno<span className="text-indigo-600">Forge</span>
+                        Pose<span className="text-indigo-600">Forge</span>
                     </Link>
                     <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
                         Back to Home
@@ -69,7 +69,7 @@ export default function DownloadPage() {
                     Download for Desktop
                 </h1>
                 <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-10">
-                    Experience the full power of AnnoForge offline with native performance 
+                    Experience the full power of PoseForge offline with native performance 
                     and enhanced privacy.
                 </p>
             </section>

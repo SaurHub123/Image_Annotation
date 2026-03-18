@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "AnnoForge",
+  "productName": "PoseForge",
   "version": "0.1.0",
-  "identifier": "com.annoforge.dev",
+  "identifier": "com.poseforge.dev",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
       "windows": [
       {
-        "title": "AnnoForge",
+        "title": "PoseForge",
         "width": 800,
         "height": 600,
         "resizable": true,

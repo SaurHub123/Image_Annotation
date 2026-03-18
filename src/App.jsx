@@ -1,5 +1,5 @@
 import { Routes, Route, Link } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTour } from "./context/TourContext";
 import {
   PenTool,
@@ -13,7 +13,9 @@ import {
   CheckCircle2,
   Cpu,
   Download,
-  WifiOff
+  WifiOff,
+  X,
+  MoreHorizontal
 } from "lucide-react";
 
 import Editor from "./components/Editor";
@@ -33,7 +35,7 @@ import SEO from "./components/SEO";
 
 function Home() {
   useEffect(() => {
-    document.title = "AnnoForge • Annotation Tools";
+    document.title = "PoseForge •Object representation Tools";
   }, []);
 
 
@@ -41,7 +43,7 @@ function Home() {
   const tools = [
     {
       id: "poly",
-      name: "AnnoPoly",
+      name: "PosePoly",
       path: "/editor",
       icon: <PenTool className="w-6 h-6" />,
       color: "bg-blue-500",
@@ -50,7 +52,7 @@ function Home() {
     },
     {
       id: "bbox",
-      name: "AnnoBox",
+      name: "PoseBox",
       path: "/bbox",
       icon: <BoxSelect className="w-6 h-6" />,
       color: "bg-emerald-500",
@@ -59,20 +61,20 @@ function Home() {
     },
     {
       id: "keypoint",
-      name: "AnnoPoint",
+      name: "PosePoint",
       path: "/keypoints",
       icon: <Crosshair className="w-6 h-6" />,
       color: "bg-indigo-500",
-      title: "Keypoint Annotation",
+      title: "Keypoint-based object representation",
       desc: "Advanced pose estimation labeling. Define joint positions and key features with sub-pixel accuracy."
     },
     {
       id: "skeleton",
-      name: "AnnoSkeleton",
+      name: "PoseSkeleton",
       path: "/skeletons",
       icon: <Bone className="w-6 h-6" />,
       color: "bg-amber-500",
-      title: "Skeleton Creator",
+      title: "Custom skeleton definition and hierarchy modeling",
       desc: "Design custom skeleton structures. Link keypoints to define relationships for pose estimation models."
     }
   ];
@@ -88,6 +90,7 @@ function Home() {
 // Separate component to use the hook
 const HomeContent = ({ tools }) => {
   const { startTour } = useTour();
+  const [showMoreModal, setShowMoreModal] = useState(false);
 
   useEffect(() => {
     // Start home tour on mount only for first-time users
@@ -98,6 +101,10 @@ const HomeContent = ({ tools }) => {
     }
   }, [startTour]);
 
+  // Filter to show only keypoint and skeleton
+  const visibleTools = tools.filter(tool => tool.id === 'keypoint' || tool.id === 'skeleton');
+  const hiddenTools = tools.filter(tool => tool.id === 'poly' || tool.id === 'bbox');
+
   return (
     <>
       {/* Navigation */}
@@ -105,7 +112,7 @@ const HomeContent = ({ tools }) => {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 tour-nav-logo">
             <Layers className="w-6 h-6 text-indigo-600" />
-            <span className="font-bold text-xl tracking-tight text-slate-900">Anno<span className="text-indigo-600">Forge</span></span>
+            <span className="font-bold text-xl tracking-tight text-slate-900">Pose<span className="text-indigo-600">Forge</span></span>
           </div>
           <div className="flex items-center gap-6 text-sm font-medium text-slate-500">
             <Link to="/download" className="hover:text-indigo-600 transition-colors flex items-center gap-1 font-semibold text-indigo-600 tour-download-link">
@@ -127,7 +134,7 @@ const HomeContent = ({ tools }) => {
           <div className="flex items-center gap-2 tour-nav-logo">
             <Layers className="w-6 h-6 text-indigo-600" />
             <span className="font-bold text-xl tracking-tight text-slate-900">
-              Anno<span className="text-indigo-600">Forge</span>
+              Pose<span className="text-indigo-600">Forge</span>
             </span>
           </div>
 
@@ -146,7 +153,7 @@ const HomeContent = ({ tools }) => {
       </nav>
 
       <SEO
-        title="AnnoForge • AI Annotation Tools"
+        title="PoseForge • AI Annotation Tools"
         description="A unified platform for image annotation. Label polygons, bounding boxes, keypoints, and skeletons with precision."
         keywords="annotation, AI, computer vision, polygon, bounding box, keypoint, skeleton"
       />
@@ -183,13 +190,13 @@ const HomeContent = ({ tools }) => {
       </section>
 
       {/* Tools Grid */}
-      <section className="max-w-7xl mx-auto px-6 pb-24" id="tools">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {tools.map((tool) => (
+      <section className="max-w-7xl mx-auto px-6 pb-2" id="tools">
+        <div className="flex flex-wrap justify-center gap-6">
+          {visibleTools.map((tool) => (
             <Link
               key={tool.id}
               to={tool.path}
-              className={`group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300 relative overflow-hidden tour-tool-${tool.id}`}
+              className={`group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300 relative overflow-hidden tour-tool-${tool.id} w-full max-w-sm`}
             >
               <div className={`absolute top-0 right-0 w-24 h-24 ${tool.color} opacity-5 rounded-bl-full group-hover:scale-110 transition-transform`} />
               <div className={`w-12 h-12 rounded-xl ${tool.color} text-white flex items-center justify-center mb-6 shadow-md group-hover:scale-110 transition-transform duration-300`}>
@@ -206,14 +213,77 @@ const HomeContent = ({ tools }) => {
               </p>
             </Link>
           ))}
+
+          {/* More Card */}
+          <button
+            onClick={() => setShowMoreModal(true)}
+            className="group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300 relative overflow-hidden cursor-pointer w-full max-w-sm"
+          >
+            <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500 opacity-5 rounded-bl-full group-hover:scale-110 transition-transform" />
+            <div className="w-12 h-12 rounded-xl bg-violet-500 text-white flex items-center justify-center mb-6 shadow-md group-hover:scale-110 transition-transform duration-300">
+              <MoreHorizontal className="w-6 h-6" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors text-left">
+              More Tools
+            </h3>
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 text-left">
+              Explore More
+            </div>
+            <p className="text-slate-600 text-sm leading-relaxed text-left">
+              Discover additional annotation tools for polygon segmentation and bounding box detection.
+            </p>
+          </button>
         </div>
       </section>
+
+      {/* More Tools Modal */}
+      {showMoreModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <h2 className="text-2xl font-bold text-slate-900">More Tools</h2>
+              <button
+                onClick={() => setShowMoreModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                {hiddenTools.map((tool) => (
+                  <Link
+                    key={tool.id}
+                    to={tool.path}
+                    onClick={() => setShowMoreModal(false)}
+                    className={`group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300 relative overflow-hidden`}
+                  >
+                    <div className={`absolute top-0 right-0 w-24 h-24 ${tool.color} opacity-5 rounded-bl-full group-hover:scale-110 transition-transform`} />
+                    <div className={`w-12 h-12 rounded-xl ${tool.color} text-white flex items-center justify-center mb-6 shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                      {tool.icon}
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                      {tool.name}
+                    </h3>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+                      {tool.title}
+                    </div>
+                    <p className="text-slate-600 text-sm leading-relaxed">
+                      {tool.desc}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Feature Highlights */}
       <section className="bg-white border-y border-slate-100 py-24">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Why Researchers Choose Anno<span className="text-indigo-600">Forge</span></h2>
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Why Researchers Choose Pose<span className="text-indigo-600">Forge</span></h2>
             <p className="text-slate-500 max-w-2xl mx-auto">Built by developers for developers. We focus on speed, accuracy, and standardization.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-12">
@@ -254,7 +324,7 @@ const HomeContent = ({ tools }) => {
               <WifiOff size={14} />
               <span>Offline Support</span>
             </div>
-            <h2 className="text-4xl font-bold mb-4 leading-tight">Take AnnoForge Offline</h2>
+            <h2 className="text-4xl font-bold mb-4 leading-tight">Take PoseForge Offline</h2>
             <p className="text-indigo-200 text-lg mb-8 leading-relaxed">
               Download the desktop application for Windows, macOS, and Linux.
               Annotate significantly larger datasets with native performance and complete privacy.
@@ -276,7 +346,7 @@ const HomeContent = ({ tools }) => {
                   <div className="w-3 h-3 rounded-full bg-amber-500" />
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
                 </div>
-                <div className="text-xs text-slate-400 font-mono ml-4">Anno Desktop</div>
+                <div className="text-xs text-slate-400 font-mono ml-4">Pose Desktop</div>
               </div>
               <div className="space-y-3">
                 <div className="h-32 bg-slate-900/50 rounded-lg border border-slate-700/50 flex items-center justify-center">
@@ -297,7 +367,7 @@ const HomeContent = ({ tools }) => {
       <footer className="bg-slate-50 border-t border-slate-200 py-12 text-center text-slate-500 text-sm">
         <div className="flex items-center justify-center gap-2 mb-4 opacity-50">
           <Layers size={18} />
-          <span className="font-bold">AnnoForge</span>
+          <span className="font-bold">PoseForge</span>
         </div>
         <p>© 2026 CSIR-CSIO, Chandigarh.</p>
         {/* <button

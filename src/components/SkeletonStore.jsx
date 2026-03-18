@@ -133,7 +133,7 @@ export default function SkeletonStore() {
 
   return (
     <div className={`min-h-screen transition-colors duration-500 font-sans ${theme.bg} ${theme.text}`}>
-      <SEO title="AnnoPoint • Skeleton Store" />
+      <SEO title="PosePoint • Skeleton Store" />
 
       {/* Modern Header */}
       <header className={`sticky top-0 z-50 backdrop-blur-md border-b ${isDarkMode ? 'border-slate-800 bg-slate-950/80' : 'border-slate-200 bg-white/80'}`}>

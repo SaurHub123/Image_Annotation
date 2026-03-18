@@ -47,7 +47,7 @@ export default function AnnotationViewer() {
   const [showBoxes, setShowBoxes] = useState(true);
 
   useEffect(() => {
-    document.title = "AnnoForge • Annotation Viewer";
+    document.title = "PoseForge • Annotation Viewer";
   }, []);
 
   const wrapperStyle = useMemo(() => ({ width: stageSize.w }), [stageSize.w]);
@@ -156,7 +156,7 @@ export default function AnnotationViewer() {
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">E</div>
           <div>
-            <h1 className="text-sm font-bold text-slate-900">AnnoForge</h1>
+            <h1 className="text-sm font-bold text-slate-900">PoseForge</h1>
             <p className="text-[10px] text-slate-500 uppercase tracking-wider">Viewer Mode</p>
           </div>
         </div>

@@ -4,7 +4,7 @@ export const homeSteps = [
     {
         target: 'body',
         placement: 'center',
-        title: 'Welcome to AnnoForge!',
+        title: 'Welcome to PoseForge!',
         content: 'Let\'s take a quick tour of the features.',
         disableBeacon: true,
     },
@@ -35,19 +35,19 @@ export const homeSteps = [
     {
         target: '.tour-tool-poly',
         title: "Polygon Tool",
-        content: 'Use AnnoPoly for precise segmentation tasks.',
+        content: 'Use PosePoly for precise segmentation tasks.',
         placement: 'top'
     },
     {
         target: '.tour-tool-bbox',
         title: "Bounding Box Tool",
-        content: 'Use AnnoBox for fast object detection labeling.',
+        content: 'Use PoseBox for fast object detection labeling',
         placement: 'top'
     },
     {
         target: '.tour-tool-keypoint',
         title: "Keypoint Tool",
-        content: 'Use AnnoPoint for precise pose estimation and feature tracking.',
+        content: 'Use PosePoint for precise pose estimation and feature tracking',
         placement: 'top'
     },
     {
@@ -62,7 +62,7 @@ export const bboxSteps = [
     {
         target: 'body',
         placement: 'center',
-        title: 'Welcome to AnnoBox',
+        title: 'Welcome to PoseBox',
         content: 'This tool is designed for bounding box object detection labeling.',
         disableBeacon: true,
     },
@@ -84,7 +84,7 @@ export const editorSteps = [
     {
         target: 'body',
         placement: 'center',
-        title: 'Welcome to AnnoPoly',
+        title: 'Welcome to PosePoly',
         content: 'This tool is for detailed polygon segmentation.',
         disableBeacon: true,
     },
@@ -118,7 +118,7 @@ export const keypointSteps = [
     {
         target: 'body',
         placement: 'center',
-        title: 'Welcome to AnnoPoint',
+        title: 'Welcome to PosePoint',
         content: 'Annotate keypoints for pose estimation.',
         disableBeacon: true,
     },
@@ -140,7 +140,7 @@ export const skeletonSteps = [
     {
         target: 'body',
         placement: 'center',
-        title: 'Welcome to AnnoSkeleton',
+        title: 'Welcome to PoseSkeleton',
         content: 'Create custom skeleton structures for your models.',
         disableBeacon: true,
     },
