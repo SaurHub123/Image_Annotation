@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { Stage, Layer, Image as KonvaImage, Line, Circle, Group, Label, Tag, Text } from "react-konva";
+import { Stage, Layer, Image as KonvaImage, Line, Circle, Group, Label, Tag, Text, Rect } from "react-konva";
 import { Link } from "react-router-dom";
 import Snackbar from "../utils/snackbar";
 import Konva from "konva";
@@ -18,7 +18,8 @@ import {
   ChevronDown,
   ChevronUp,
   Layers,
-  Zap
+  Zap,
+  Hand // NEW
 } from "lucide-react";
 import { loadSkeletons } from "../utils/skeletonStorage";
 import { useTour } from "../context/TourContext";
@@ -49,6 +50,7 @@ export default function KeypointAnnotator() {
 
   const stageRef = useRef(null);
   const imageRef = useRef(null);
+  const containerRef = useRef(null); // Ref for measuring container
 
   // Theme & UI State
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -73,6 +75,10 @@ export default function KeypointAnnotator() {
   const [connectionSource, setConnectionSource] = useState(null);
   const [activeKp, setActiveKp] = useState(null);
   const [activeFilter, setActiveFilter] = useState("None");
+  const [stageScale, setStageScale] = useState(1);
+  const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
+  const [panMode, setPanMode] = useState(false);
+  const [labelLayouts, setLabelLayouts] = useState({});
   const [skeletons, setSkeletons] = useState([]);
   const [lockedSkeleton, setLockedSkeleton] = useState(null);
   const [currentAppliedSkeleton, setCurrentAppliedSkeleton] = useState(null);
@@ -95,6 +101,80 @@ export default function KeypointAnnotator() {
   const showToast = (message, type = "success") => {
     setToast({ show: true, message, type });
   };
+
+  useEffect(() => {
+    if (!keypoints.length) {
+      setLabelLayouts({});
+      return;
+    }
+
+    const occupiedBoxes = keypoints.map(kp => ({
+      x: kp.x - 8, y: kp.y - 8, w: 16, h: 16
+    }));
+
+    const newLayouts = {};
+    const angles = [
+      -Math.PI / 2, // Top
+      0,            // Right
+      Math.PI,      // Left
+      Math.PI / 2,  // Bottom
+      -Math.PI / 4, // Top-Right
+      -3 * Math.PI / 4, // Top-Left
+      Math.PI / 4,  // Bottom-Right
+      3 * Math.PI / 4   // Bottom-Left
+    ];
+
+    const checkOverlap = (rect) => {
+      return occupiedBoxes.some(box => 
+        rect.x < box.x + box.w &&
+        rect.x + rect.w > box.x &&
+        rect.y < box.y + box.h &&
+        rect.y + rect.h > box.y
+      );
+    };
+
+    keypoints.forEach(kp => {
+      const w = Math.max(20, kp.name.length * 7 + 16);
+      const h = 24;
+      
+      let placed = false;
+      let finalDx = 0;
+      let finalDy = 0;
+      let candidateBox = null;
+
+      outer: for (let d = 20; d <= 80; d += 15) {
+        for (let angle of angles) {
+          const dx = Math.cos(angle) * d;
+          const dy = Math.sin(angle) * d;
+
+          const rect = {
+            x: kp.x + dx - w / 2,
+            y: kp.y + dy - h / 2,
+            w, h
+          };
+
+          if (!checkOverlap(rect)) {
+            finalDx = dx;
+            finalDy = dy;
+            candidateBox = rect;
+            placed = true;
+            break outer;
+          }
+        }
+      }
+
+      if (!placed) {
+        finalDx = 80;
+        finalDy = -80;
+        candidateBox = { x: kp.x + finalDx - w / 2, y: kp.y + finalDy - h / 2, w, h };
+      }
+
+      newLayouts[kp.id] = { dx: finalDx, dy: finalDy, w, h };
+      occupiedBoxes.push(candidateBox);
+    });
+
+    setLabelLayouts(newLayouts);
+  }, [keypoints]);
 
   /* ================= FOLDER LOGIC ================= */
   const handleOpenFolders = async () => {
@@ -140,22 +220,86 @@ export default function KeypointAnnotator() {
     const file = await fileData.handle.getFile();
     const img = new Image();
     img.onload = () => {
-      const scale = Math.min(900 / img.width, 1);
+      let scale = 1;
+      if (containerRef.current) {
+        const { clientWidth, clientHeight } = containerRef.current;
+        const padding = 40;
+        const availableW = Math.max(100, clientWidth - padding);
+        const availableH = Math.max(100, clientHeight - padding);
+        scale = Math.min(availableW / img.width, availableH / img.height, 1);
+      } else {
+        scale = Math.min(900 / img.width, 1);
+      }
       setStageSize({ w: Math.round(img.width * scale), h: Math.round(img.height * scale) });
+      setStageScale(1);
+      setStagePos({ x: 0, y: 0 });
       setImageObj(img);
       setFileName(fileData.name);
       setKeypoints([]);
       setConnections([]);
       setConnectionSource(null);
 
-      // Auto-apply locked skeleton to new images
-      if (lockedSkeleton) {
+      if (fileData.isAnnotated && outputDirHandle) {
+        const baseName = fileData.name.replace(/\.[^/.]+$/, "");
+        loadAnnotationFile(baseName, scale, Math.round(img.width * scale), Math.round(img.height * scale));
+      } else if (lockedSkeleton) {
         setTimeout(() => {
           applySkeleton(lockedSkeleton);
         }, 100);
       }
     };
     img.src = fileData.url;
+  };
+
+  const loadAnnotationFile = async (baseName, scale, stageW, stageH) => {
+    try {
+      const fileHandle = await outputDirHandle.getFileHandle(`${baseName}.txt`);
+      const file = await fileHandle.getFile();
+      const text = await file.text();
+      const parts = text.trim().split(/\s+/);
+      
+      if (parts.length > 5) {
+        const kps = [];
+        let index = 0;
+        for (let i = 5; i < parts.length; i += 3) {
+          const xNorm = parseFloat(parts[i]);
+          const yNorm = parseFloat(parts[i + 1]);
+          const vis = parseInt(parts[i + 2], 10);
+          
+          if (!isNaN(xNorm) && !isNaN(yNorm)) {
+            const defaultName = toAlphabetic(index);
+            const skelNode = lockedSkeleton?.keypoints?.[index];
+            kps.push({
+              id: crypto.randomUUID(),
+              originalId: skelNode ? skelNode.id : undefined,
+              x: xNorm * stageW,
+              y: yNorm * stageH,
+              name: skelNode ? skelNode.name : defaultName,
+              visibility: vis >= 0 ? vis : 2,
+            });
+            index++;
+          }
+        }
+        setKeypoints(kps);
+        
+        if (lockedSkeleton && lockedSkeleton.keypoints.length === kps.length) {
+          const newConnections = [];
+          lockedSkeleton.connections.forEach(conn => {
+            const fromNode = kps.find(k => k.originalId === conn.from);
+            const toNode = kps.find(k => k.originalId === conn.to);
+            if (fromNode && toNode) {
+              newConnections.push({ from: fromNode.id, to: toNode.id });
+            }
+          });
+          setConnections(newConnections);
+          setCurrentAppliedSkeleton(lockedSkeleton);
+        }
+        showToast("Loaded existing annotations.", "success");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error loading existing annotations", "error");
+    }
   };
 
   /* ================= SKELETON LOGIC ================= */
@@ -226,8 +370,32 @@ kpt_shape: [${keypointCount}, 3]`;
   };
 
   /* ================= ANNOTATION LOGIC ================= */
+  const handleWheel = (e) => {
+    e.evt.preventDefault();
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const scaleBy = 1.1;
+    const oldScale = stage.scaleX();
+    const pointer = stage.getPointerPosition();
+
+    const mousePointTo = {
+      x: (pointer.x - stage.x()) / oldScale,
+      y: (pointer.y - stage.y()) / oldScale,
+    };
+
+    const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
+    if (newScale < 0.1 || newScale > 10) return;
+
+    setStageScale(newScale);
+    setStagePos({
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y - mousePointTo.y * newScale,
+    });
+  };
+
   const handleStageClick = (e) => {
-    if (!imageObj || connectMode) return;
+    if (!imageObj || connectMode || panMode) return;
     const stage = e.target.getStage();
     if (e.target !== stage && e.target.className !== "Image") return;
 
@@ -238,12 +406,17 @@ kpt_shape: [${keypointCount}, 3]`;
     }
 
     const pos = stage.getPointerPosition();
+    const relativePos = {
+      x: (pos.x - stagePos.x) / stageScale,
+      y: (pos.y - stagePos.y) / stageScale,
+    };
+    
     setKeypoints((prev) => [
       ...prev,
       {
         id: crypto.randomUUID(),
-        x: pos.x,
-        y: pos.y,
+        x: relativePos.x,
+        y: relativePos.y,
         name: toAlphabetic(prev.length),
         visibility: 2,
       },
@@ -262,11 +435,17 @@ kpt_shape: [${keypointCount}, 3]`;
       return;
     }
 
-    if (connectionSource === id) return;
+    if (connectionSource === id) {
+      setConnectionSource(null);
+      return;
+    }
 
     setConnections((prev) => {
       const exists = prev.some(c => (c.from === connectionSource && c.to === id) || (c.from === id && c.to === connectionSource));
-      return exists ? prev : [...prev, { from: connectionSource, to: id }];
+      if (exists) {
+        return prev.filter(c => !((c.from === connectionSource && c.to === id) || (c.from === id && c.to === connectionSource)));
+      }
+      return [...prev, { from: connectionSource, to: id }];
     });
     setConnectionSource(null);
   };
@@ -275,14 +454,14 @@ kpt_shape: [${keypointCount}, 3]`;
     if (!imageObj || !keypoints.length || !outputDirHandle) return;
 
     try {
-      // If a skeleton was applied and hasn't been locked yet, lock it and show modal
-      if (currentAppliedSkeleton && !lockedSkeleton) {
-        setLockedSkeleton(currentAppliedSkeleton);
+      if (!dataYamlCreated) {
+        if (currentAppliedSkeleton && !lockedSkeleton) {
+          setLockedSkeleton(currentAppliedSkeleton);
+        }
         setShowClassModal(true);
         return;
       }
 
-      // Otherwise, just save the annotation file
       await saveAnnotationFile();
     } catch (err) {
       console.error(err);
@@ -345,11 +524,11 @@ kpt_shape: [${keypointCount}, 3]`;
     }
 
     setShowClassModal(false);
-    if (!dataYamlCreated && currentAppliedSkeleton) {
-      await createDataYaml(currentAppliedSkeleton.keypoints.length);
+    if (!dataYamlCreated) {
+      const kpCount = currentAppliedSkeleton ? currentAppliedSkeleton.keypoints.length : keypoints.length;
+      await createDataYaml(kpCount);
       setDataYamlCreated(true);
     }
-    // Continue with saving the annotation file
     await saveAnnotationFile();
   };
 
@@ -443,9 +622,12 @@ kpt_shape: [${keypointCount}, 3]`;
             </button>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setConnectMode(!connectMode)} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all ${connectMode ? "bg-emerald-500 text-white shadow-lg" : theme.buttonSecondary}`}>
-                <LinkIcon size={16} /> {connectMode ? "Linking..." : "Link Mode"}
+                <LinkIcon size={16} /> {connectMode ? "Linking" : "Link"}
               </button>
-              <button onClick={handleSave} disabled={!keypoints.length} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${!keypoints.length ? "opacity-50 " + theme.buttonSecondary : "bg-sky-600 text-white shadow-lg"}`}>
+              <button onClick={() => setPanMode(!panMode)} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all ${panMode ? "bg-amber-500 text-white shadow-lg" : theme.buttonSecondary}`}>
+                <Hand size={16} /> {panMode ? "Panning" : "Pan"}
+              </button>
+              <button onClick={handleSave} disabled={!keypoints.length} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${!keypoints.length ? "opacity-50 " + theme.buttonSecondary : "bg-sky-600 text-white shadow-lg"}`}>
                 <Download size={16} /> Save
               </button>
             </div>
@@ -579,7 +761,7 @@ kpt_shape: [${keypointCount}, 3]`;
         </aside>
 
         {/* ===== CANVAS AREA ===== */}
-        <main className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto relative bg-neutral-100/30 dark:bg-slate-900/10">
+        <main ref={containerRef} className="flex-1 flex flex-col items-center justify-center p-8 overflow-hidden relative bg-neutral-100/30 dark:bg-slate-900/10">
           {!imageObj ? (
             <div onClick={handleOpenFolders} className="flex flex-col items-center justify-center w-full max-w-2xl h-96 border-2 border-dashed rounded-3xl cursor-pointer bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-slate-300 dark:border-slate-700">
               <div className="p-6 bg-indigo-500/10 rounded-full mb-4 text-indigo-500"><ImagePlus size={48} /></div>
@@ -588,7 +770,24 @@ kpt_shape: [${keypointCount}, 3]`;
             </div>
           ) : (
             <div className="tour-canvas shadow-2xl rounded-xl overflow-hidden border-4 border-white dark:border-slate-800">
-              <Stage ref={stageRef} width={stageSize.w} height={stageSize.h} onMouseDown={handleStageClick} style={{ cursor: connectMode ? "alias" : "crosshair" }}>
+              <Stage 
+                ref={stageRef} 
+                width={stageSize.w} 
+                height={stageSize.h} 
+                scaleX={stageScale}
+                scaleY={stageScale}
+                x={stagePos.x}
+                y={stagePos.y}
+                onMouseDown={handleStageClick} 
+                onWheel={handleWheel}
+                draggable={panMode}
+                onDragEnd={(e) => {
+                  if (e.target === stageRef.current) {
+                    setStagePos({ x: e.target.x(), y: e.target.y() });
+                  }
+                }}
+                style={{ cursor: panMode ? "grab" : connectMode ? "alias" : "crosshair", touchAction: 'none' }}
+              >
                 <Layer><KonvaImage ref={imageRef} image={imageObj} width={stageSize.w} height={stageSize.h} filters={getFilters()} /></Layer>
                 <Layer>
                   {/* Render Connections */}
@@ -605,10 +804,35 @@ kpt_shape: [${keypointCount}, 3]`;
                       setKeypoints(prev => prev.map(k => k.id === kp.id ? { ...k, x, y } : k));
                     }} onClick={(e) => handleKeypointClick(kp.id, e)}>
                       <Circle radius={kp.id === connectionSource ? 8 : 6} fill={kp.id === connectionSource ? "#fbbf24" : "#6366f1"} stroke="white" strokeWidth={2} />
-                      <Label y={-25} x={10}>
-                        <Tag fill="#1e293b" pointerDirection="left" pointerWidth={6} pointerHeight={6} cornerRadius={4} />
-                        <Text text={kp.name} fill="white" padding={5} fontSize={11} fontStyle="bold" />
-                      </Label>
+                      {labelLayouts[kp.id] && (
+                        <Group>
+                          <Line
+                            points={[0, 0, labelLayouts[kp.id].dx, labelLayouts[kp.id].dy]}
+                            stroke={kp.id === connectionSource || activeKp === kp.id ? "#ffffff" : "#cbd5e1"}
+                            strokeWidth={1}
+                            dash={[2, 2]}
+                            opacity={0.8}
+                          />
+                          <Group x={labelLayouts[kp.id].dx - labelLayouts[kp.id].w / 2} y={labelLayouts[kp.id].dy - labelLayouts[kp.id].h / 2} opacity={kp.id === connectionSource || activeKp === kp.id ? 1 : 0.75}>
+                            <Rect
+                              width={labelLayouts[kp.id].w}
+                              height={labelLayouts[kp.id].h}
+                              fill="#1e293b"
+                              cornerRadius={4}
+                            />
+                            <Text
+                              text={kp.name}
+                              fill="white"
+                              width={labelLayouts[kp.id].w}
+                              height={labelLayouts[kp.id].h}
+                              align="center"
+                              verticalAlign="middle"
+                              fontSize={11}
+                              fontStyle="bold"
+                            />
+                          </Group>
+                        </Group>
+                      )}
                     </Group>
                   ))}
                 </Layer>

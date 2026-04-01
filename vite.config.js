@@ -53,4 +53,10 @@ const skeletonsPlugin = {
 export default defineConfig({
   plugins: [skeletonsPlugin, react(), tailwindcss()],
   // base: "/Image_Annotation/",
+    server: {
+    host: true,
+    allowedHosts: [
+      "climbing-clearly-generator-seriously.trycloudflare.com"
+    ]
+  }
 })

@@ -18,7 +18,8 @@ import {
   ChevronDown,
   ChevronUp,
   Layers,
-  Upload
+  Upload,
+  Hand // NEW
 } from "lucide-react";
 import { useTour } from "../context/TourContext";
 import SEO from "./SEO";
@@ -27,6 +28,7 @@ export default function BoundingBoxAnnotator() {
   const stageRef = useRef(null);
   const transformerRef = useRef(null);
   const imageRef = useRef(null);
+  const containerRef = useRef(null);
 
   // Theme & UI State
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -49,6 +51,9 @@ export default function BoundingBoxAnnotator() {
   const [selectedId, setSelectedId] = useState(null);
   const [newRect, setNewRect] = useState(null);
   const [activeFilter, setActiveFilter] = useState("None");
+  const [stageScale, setStageScale] = useState(1);
+  const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
+  const [panMode, setPanMode] = useState(false);
 
   const { startTour } = useTour();
 
@@ -120,8 +125,19 @@ export default function BoundingBoxAnnotator() {
     const file = await fileData.handle.getFile();
     const img = new Image();
     img.onload = () => {
-      const scale = Math.min(900 / img.width, 1);
+      let scale = 1;
+      if (containerRef.current) {
+        const { clientWidth, clientHeight } = containerRef.current;
+        const padding = 40;
+        const availableW = Math.max(100, clientWidth - padding);
+        const availableH = Math.max(100, clientHeight - padding);
+        scale = Math.min(availableW / img.width, availableH / img.height, 1);
+      } else {
+        scale = Math.min(900 / img.width, 1);
+      }
       setStageSize({ w: Math.round(img.width * scale), h: Math.round(img.height * scale) });
+      setStageScale(1);
+      setStagePos({ x: 0, y: 0 });
       setImageObj(img);
       setFileName(fileData.name);
       setRectangles([]);
@@ -135,17 +151,49 @@ export default function BoundingBoxAnnotator() {
   const handleMouseDown = (e) => {
     if (!imageObj) return;
     const clickedOnEmpty = e.target === e.target.getStage() || e.target.className === "Image";
-    if (clickedOnEmpty) {
+    if (clickedOnEmpty && !panMode) {
       setSelectedId(null);
-      const { x, y } = e.target.getStage().getPointerPosition();
-      setNewRect({ x, y, w: 0, h: 0, id: crypto.randomUUID() });
+      const pos = e.target.getStage().getPointerPosition();
+      const relativePos = {
+        x: (pos.x - stagePos.x) / stageScale,
+        y: (pos.y - stagePos.y) / stageScale,
+      };
+      setNewRect({ x: relativePos.x, y: relativePos.y, w: 0, h: 0, id: crypto.randomUUID() });
     }
   };
 
   const handleMouseMove = (e) => {
-    if (!newRect) return;
-    const { x, y } = e.target.getStage().getPointerPosition();
-    setNewRect(prev => ({ ...prev, w: x - prev.x, h: y - prev.y }));
+    if (!newRect || panMode) return;
+    const pos = e.target.getStage().getPointerPosition();
+    const relativePos = {
+      x: (pos.x - stagePos.x) / stageScale,
+      y: (pos.y - stagePos.y) / stageScale,
+    };
+    setNewRect(prev => ({ ...prev, w: relativePos.x - prev.x, h: relativePos.y - prev.y }));
+  };
+
+  const handleWheel = (e) => {
+    e.evt.preventDefault();
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const scaleBy = 1.1;
+    const oldScale = stage.scaleX();
+    const pointer = stage.getPointerPosition();
+
+    const mousePointTo = {
+      x: (pointer.x - stage.x()) / oldScale,
+      y: (pointer.y - stage.y()) / oldScale,
+    };
+
+    const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
+    if (newScale < 0.1 || newScale > 10) return;
+
+    setStageScale(newScale);
+    setStagePos({
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y - mousePointTo.y * newScale,
+    });
   };
 
   const handleMouseUp = () => {
@@ -300,7 +348,10 @@ export default function BoundingBoxAnnotator() {
               <button onClick={() => setRectangles(r => r.slice(0, -1))} disabled={!rectangles.length} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${theme.buttonSecondary} disabled:opacity-50`}>
                 <Undo size={16} /> Undo
               </button>
-              <button onClick={handleSave} disabled={!rectangles.length} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${!rectangles.length ? "opacity-50 " + theme.buttonSecondary : "bg-sky-600 text-white shadow-lg"}`}>
+              <button onClick={() => setPanMode(!panMode)} className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-all ${panMode ? "bg-amber-500 text-white shadow-lg" : theme.buttonSecondary}`}>
+                <Hand size={16} /> {panMode ? "Panning" : "Pan"}
+              </button>
+              <button onClick={handleSave} disabled={!rectangles.length} className={`col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium ${!rectangles.length ? "opacity-50 " + theme.buttonSecondary : "bg-sky-600 text-white shadow-lg"}`}>
                 <Download size={16} /> Save
               </button>
             </div>
@@ -349,7 +400,7 @@ export default function BoundingBoxAnnotator() {
         </aside>
 
         {/* ===== CANVAS AREA ===== */}
-        <main className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto relative">
+        <main ref={containerRef} className="flex-1 flex flex-col items-center justify-center p-8 overflow-hidden relative">
           {!imageObj ? (
             <div onClick={handleOpenFolders} className="flex flex-col items-center justify-center w-full max-w-2xl h-96 border-2 border-dashed rounded-3xl cursor-pointer bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-slate-300 dark:border-slate-700">
               <div className="p-6 bg-indigo-500/10 rounded-full mb-4 text-indigo-500"><ImagePlus size={48} /></div>
@@ -362,10 +413,21 @@ export default function BoundingBoxAnnotator() {
                 ref={stageRef}
                 width={stageSize.w}
                 height={stageSize.h}
+                scaleX={stageScale}
+                scaleY={stageScale}
+                x={stagePos.x}
+                y={stagePos.y}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
-                style={{ cursor: "crosshair" }}
+                onWheel={handleWheel}
+                draggable={panMode}
+                onDragEnd={(e) => {
+                  if (e.target === stageRef.current) {
+                    setStagePos({ x: e.target.x(), y: e.target.y() });
+                  }
+                }}
+                style={{ cursor: panMode ? "grab" : "crosshair", touchAction: 'none' }}
               >
                 <Layer>
                   <KonvaImage ref={imageRef} image={imageObj} width={stageSize.w} height={stageSize.h} filters={getFilters()} />
