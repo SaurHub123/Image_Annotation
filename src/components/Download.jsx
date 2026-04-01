@@ -19,7 +19,7 @@ export default function DownloadPage() {
             size: "8.3 MB",
             color: "bg-blue-600",
             hover: "hover:bg-blue-700",
-            link: "/poseforge.exe",
+            link: "public\\PoseForge.exe",
             button: "Download",
             available: true
         },
